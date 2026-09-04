@@ -29,3 +29,11 @@ The private key remains in the developer's login keychain. No private key, PKCS#
 - Build or test Intel/universal macOS output if it will be advertised.
 - Use Developer ID signing and notarization for a public macOS binary.
 - Package versioned release assets and publish SHA-256 checksums.
+
+## Application icon assets
+
+- macOS master: 1254×1254 RGB PNG with a full-bleed graphite background.
+- Windows master: 1254×1254 RGBA PNG with genuinely transparent corners.
+- Generated `.icns` contains the standard 16–1024px macOS iconset variants.
+- Generated `.ico` contains seven PNG-compressed, 32-bit entries at 16、24、32、48、64、128、256px.
+- The Windows 256px preview retains clean transparent padding and readable central `+` artwork.

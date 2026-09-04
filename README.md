@@ -75,6 +75,7 @@ tccutil reset Accessibility com.phrasedock.desktop
 ```sh
 npm ci
 npm run setup:signing
+npm run build:icons
 npm start
 ```
 
@@ -100,6 +101,7 @@ src/renderer/              共用 HTML / CSS / JavaScript 界面
 src/platform/macos.cjs      Mac 桥接进程管理
 src/platform/windows.cjs    Windows 扩展入口（当前明确返回未实现）
 native/macos/               Mac 的 Swift 输入组件
+resources/icons/            macOS .icns、Windows .ico 和两套 PNG 母版
 scripts/                   构建、打包和语法检查
 test/                      配置及屏幕变化的关键边界检查
 docs/architecture.md       平台适配约定与后续扩展
@@ -127,6 +129,14 @@ docs/validation.md         本次验证记录
 ## License
 
 PhraseDock 使用 [MIT License](LICENSE)。
+
+## Application icons
+
+- `resources/icons/source/PhraseDock-macos.png`：深灰背景铺满的 macOS 母版，由系统应用最终圆角遮罩。
+- `resources/icons/source/PhraseDock-windows.png`：带真实 Alpha 通道的 Windows 母版。
+- `npm run build:icons` 生成 macOS `.icns` 和包含 16、24、32、48、64、128、256px 的 Windows `.ico`。
+- Windows 各尺寸在透明画布中使用 90% 图案尺寸，四周保留约 5% 透明留白。
+- Mac 打包脚本会先重新生成图标，再把 `PhraseDock.icns` 写入应用包。菜单栏仍使用简化的单色模板图标。
 
 ## 参考
 
