@@ -1,0 +1,257 @@
+'use strict';
+
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, shell, systemPreferences } = require('electron');
+const fs = require('node:fs');
+const path = require('node:path');
+const { validateConfig } = require('./core/config.cjs');
+const { COLLAPSED_SIZE, radialLayout, boundsAroundAnchor, restoreAnchor } = require('./core/radial-layout.cjs');
+const { createPlatform } = require('./platform/index.cjs');
+
+app.setName('PhraseDock');
+if (!app.requestSingleInstanceLock()) { app.quit(); }
+else { app.whenReady().then(start).catch(error => { console.error(error.message); app.quit(); }); }
+
+let panel, tray, adapter, fixture, config, configFile, positionFile, anchor, layout;
+let lastStatus = null, inserting = false, noticeUntil = 0, expanded = false;
+let quitRequested = false;
+let saveTimer, pollTimer;
+
+function resultNotice(result, duration = 2000) {
+  noticeUntil = Date.now() + duration;
+  panel?.webContents.send('phrase:result', result);
+}
+function handle(channel, callback) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (event.sender !== panel?.webContents) throw new Error('Untrusted window.');
+    return callback(...args);
+  });
+}
+function configureAdapter() {
+  const target = { macBundleIds: [...config.target.macBundleIds] };
+  if (fixture && !fixture.isDestroyed()) {
+    target.macBundleIds.push(app.isPackaged ? 'com.phrasedock.desktop' : 'com.github.Electron');
+  }
+  adapter.configure(target);
+}
+function readConfig() {
+  // Parse completely before swapping; a broken edit leaves the current buttons working.
+  const next = validateConfig(JSON.parse(fs.readFileSync(configFile, 'utf8')));
+  config = next;
+  configureAdapter();
+  return config;
+}
+function workAreas() { return screen.getAllDisplays().map(display => display.workArea); }
+function currentSize() { return expanded ? { width: layout.width, height: layout.height } : COLLAPSED_SIZE; }
+function saveAnchorSoon() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (anchor) fs.writeFileSync(positionFile, JSON.stringify({ version: 2, x: anchor.x, y: anchor.y }));
+  }, 250);
+}
+function applyPanelBounds() {
+  const resolved = boundsAroundAnchor(anchor, currentSize(), workAreas());
+  anchor = resolved.anchor;
+  panel.setBounds(resolved.bounds);
+  saveAnchorSoon();
+}
+function setExpanded(value) {
+  expanded = Boolean(value);
+  applyPanelBounds();
+  return { expanded, layout };
+}
+async function poll() {
+  if (inserting || !panel || panel.isDestroyed() || !panel.isVisible()) return;
+  const value = await adapter.status();
+  lastStatus = value;
+  if (Date.now() > noticeUntil && !panel.isDestroyed()) panel.webContents.send('platform:status', value);
+}
+function resizePanel() {
+  applyPanelBounds();
+}
+function showPanel() {
+  panel.showInactive();
+  poll();
+}
+
+async function start() {
+  const dataDir = app.getPath('userData');
+  fs.mkdirSync(dataDir, { recursive: true });
+  configFile = path.join(dataDir, 'phrases.json');
+  positionFile = path.join(dataDir, 'window.json');
+  const defaultFile = path.join(app.getAppPath(), 'config/phrases.json');
+  if (!fs.existsSync(configFile)) fs.copyFileSync(defaultFile, configFile);
+  let configProblem = '';
+  try { config = validateConfig(JSON.parse(fs.readFileSync(configFile, 'utf8'))); }
+  catch (error) { config = validateConfig(JSON.parse(fs.readFileSync(defaultFile, 'utf8'))); configProblem = error.message; }
+  adapter = createPlatform({
+    platform: process.platform,
+    helperPath: app.isPackaged ? path.join(process.resourcesPath, 'PhraseBridge') : path.join(app.getAppPath(), 'build/PhraseBridge'),
+    target: config.target
+  });
+  let saved;
+  try { saved = JSON.parse(fs.readFileSync(positionFile, 'utf8')); } catch {}
+  layout = radialLayout(config.phrases.length);
+  anchor = restoreAnchor(saved, workAreas());
+  panel = new BrowserWindow({
+    ...boundsAroundAnchor(anchor, COLLAPSED_SIZE, workAreas()).bounds,
+    title: 'PhraseDock · 短语浮窗', frame: false, show: false, transparent: true,
+    backgroundColor: '#00000000', resizable: false, maximizable: false, minimizable: false,
+    fullscreenable: false, alwaysOnTop: true, skipTaskbar: true, focusable: false,
+    acceptFirstMouse: true, hasShadow: false,
+    ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false,
+      contextIsolation: true, sandbox: true, spellcheck: false }
+  });
+  panel.setAlwaysOnTop(true, 'floating');
+  if (process.platform === 'darwin') {
+    app.dock.hide();
+    panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
+  panel.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  panel.webContents.on('will-navigate', event => event.preventDefault());
+  panel.on('moved', () => {
+    if (panel.isDestroyed()) return;
+    const bounds = panel.getBounds();
+    anchor = { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) };
+    saveAnchorSoon();
+  });
+  screen.on('display-removed', resizePanel);
+  screen.on('display-metrics-changed', resizePanel);
+
+  handle('app:initial', () => ({ phrases: config.phrases, layout, expanded, platform: process.platform, version: app.getVersion() }));
+  handle('phrase:insert', async id => {
+    if (inserting) return { ok: false, code: 'busy', message: '正在插入上一段短语。' };
+    const phrase = config.phrases.find(item => item.id === id);
+    if (!phrase) return { ok: false, code: 'invalid', message: '短语不存在，请重新加载配置。' };
+    inserting = true;
+    try {
+      // Check now, not only against the possibly stale status shown in the UI.
+      const status = await adapter.status();
+      lastStatus = status;
+      const result = status.ready ? await adapter.insert(phrase.text, status.pid) : status;
+      return result;
+    } finally {
+      inserting = false;
+      if (quitRequested) app.quit();
+    }
+  });
+  handle('app:permission', async () => {
+    if (process.platform !== 'darwin') return;
+    systemPreferences.isTrustedAccessibilityClient(true);
+    await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    resultNotice({ ok: false, code: 'permission', message: '打开 PhraseDock 的辅助功能开关，再回到输入框。' }, 5000);
+  });
+  handle('app:config', async () => {
+    const error = await shell.openPath(configFile);
+    if (error) shell.showItemInFolder(configFile);
+    return { ok: !error };
+  });
+  handle('app:reload', () => {
+    try {
+      readConfig();
+      layout = radialLayout(config.phrases.length);
+      resizePanel();
+      panel.webContents.send('config:updated', { phrases: config.phrases, layout });
+      resultNotice({ ok: true, code: 'reloaded', message: '短语已重新加载。' });
+    } catch (error) { resultNotice({ ok: false, code: 'config', message: error.message }, 6000); }
+  });
+  handle('app:expanded', value => setExpanded(value));
+  handle('window:pointer', ignore => panel.setIgnoreMouseEvents(Boolean(ignore), { forward: true }));
+  handle('app:menu', () => showHubMenu());
+  handle('app:hide', () => hidePanel());
+  handle('app:test', () => openFixture());
+  handle('app:quit', () => app.quit());
+
+  await panel.loadFile(path.join(__dirname, 'renderer/index.html'));
+  showPanel();
+  if (configProblem) resultNotice({ ok: false, code: 'config', message: `配置有误，暂用默认短语：${configProblem}` }, 7000);
+  createTray();
+  pollTimer = setInterval(poll, 1100);
+  app.on('second-instance', showPanel);
+  app.on('activate', showPanel);
+}
+
+function hidePanel() {
+  if (expanded) {
+    setExpanded(false);
+    panel.webContents.send('menu:set-expanded', false);
+  }
+  panel.setIgnoreMouseEvents(false);
+  panel.hide();
+}
+
+function reloadPhrases() {
+  try {
+    readConfig();
+    layout = radialLayout(config.phrases.length);
+    resizePanel();
+    panel.webContents.send('config:updated', { phrases: config.phrases, layout });
+    resultNotice({ ok: true, code: 'reloaded', message: '短语已重新加载。' });
+  } catch (error) { resultNotice({ ok: false, code: 'config', message: error.message }, 6000); }
+}
+
+function permissionSettings() {
+  if (process.platform !== 'darwin') return;
+  systemPreferences.isTrustedAccessibilityClient(true);
+  shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+}
+
+function utilityMenu() {
+  return [
+    { label: '编辑短语配置', click: () => shell.openPath(configFile) },
+    { label: '重新加载短语', click: reloadPhrases },
+    { label: '打开输入测试', click: openFixture },
+    ...(process.platform === 'darwin' ? [{ label: '打开辅助功能设置', click: permissionSettings }] : []),
+    { type: 'separator' },
+    { label: '隐藏 PhraseDock', click: hidePanel },
+    { label: '退出 PhraseDock', click: () => app.quit() }
+  ];
+}
+
+function showHubMenu() {
+  panel.setIgnoreMouseEvents(false);
+  Menu.buildFromTemplate(utilityMenu()).popup({ window: panel });
+}
+
+function createTray() {
+  // Tiny monochrome speech bubble, drawn as a native template bitmap.
+  const pixels = Buffer.alloc(22 * 22 * 4);
+  for (let y = 3; y < 20; y++) for (let x = 3; x < 19; x++) {
+    const body = y < 16;
+    const tail = y >= 16 && x >= 6 && x < 11 - (y - 16);
+    const line = ((y === 7 || y === 8) && x >= 6 && x < 16) || ((y === 11 || y === 12) && x >= 6 && x < 13);
+    if ((body || tail) && !line) pixels[(y * 22 + x) * 4 + 3] = 255;
+  }
+  const icon = nativeImage.createFromBitmap(pixels, { width: 22, height: 22, scaleFactor: 1 });
+  icon.setTemplateImage(true);
+  tray = new Tray(icon);
+  tray.setToolTip('PhraseDock · 短语浮窗');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '显示短语浮窗', click: showPanel },
+    { type: 'separator' },
+    ...utilityMenu()
+  ]));
+  tray.on('click', showPanel);
+}
+
+function openFixture() {
+  if (fixture && !fixture.isDestroyed()) { fixture.show(); return; }
+  fixture = new BrowserWindow({
+    width: 640, height: 460, title: 'PhraseDock · 输入测试',
+    backgroundColor: '#f4f5f1', webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
+  });
+  configureAdapter();
+  fixture.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  fixture.webContents.on('will-navigate', event => event.preventDefault());
+  fixture.loadFile(path.join(__dirname, 'renderer/test-input.html'));
+  fixture.on('closed', () => { fixture = null; configureAdapter(); });
+  showPanel();
+}
+
+app.on('before-quit', event => {
+  // Let an in-flight paste restore the clipboard before ending the native process.
+  if (inserting) { quitRequested = true; event.preventDefault(); return; }
+  clearTimeout(saveTimer); clearInterval(pollTimer);
+  adapter?.close();
+});
+app.on('window-all-closed', () => app.quit());

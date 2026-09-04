@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "target": { "macBundleIds": ["com.openai.codex"] },
+  "phrases": [
+    { "id": "analyze", "label": "先分析", "text": "先分析问题、原因和解决方案，暂时不要修改代码。" },
+    { "id": "implement", "label": "开始实现", "text": "按上面确认的方案开始实现，完成后说明修改内容和验证结果。" },
+    { "id": "continue", "label": "继续", "text": "继续完成当前任务。" },
+    { "id": "minimal", "label": "最小修改", "text": "请做最小范围的修改，保留无关的现有改动。" },
+    { "id": "verify", "label": "检查结果", "text": "请检查实现是否符合需求，并说明已经验证和仍未验证的部分。" },
+    { "id": "explain", "label": "讲清楚", "text": "请用简单清楚的语言解释，并给一个具体例子。" }
+  ]
+}

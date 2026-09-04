@@ -1,0 +1,30 @@
+{
+  "name": "phrasedock",
+  "productName": "PhraseDock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A floating phrase palette that keeps the target editor focused.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uuuuzz/PhraseDock.git"
+  },
+  "homepage": "https://github.com/uuuuzz/PhraseDock#readme",
+  "bugs": {
+    "url": "https://github.com/uuuuzz/PhraseDock/issues"
+  },
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "node scripts/build-native.mjs && electron .",
+    "setup:signing": "node scripts/setup-signing.mjs",
+    "build:native": "node scripts/build-native.mjs",
+    "package:mac": "node scripts/package-mac.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test test/*.test.cjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "44.1.1"
+  },
+  "engines": { "node": ">=22.12.0" }
+}

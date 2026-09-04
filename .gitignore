@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+.DS_Store
+*.log
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+*.crt
+*.mobileprovision

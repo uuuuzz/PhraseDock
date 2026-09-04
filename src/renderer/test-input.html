@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>PhraseDock · 输入测试</title>
+  <link rel="stylesheet" href="test-input.css">
+  <script defer src="test-input.js"></script>
+</head>
+<body>
+  <div class="eyebrow">PHRASEDOCK / INPUT TEST</div>
+  <h1>把光标放好，点一句试试。</h1>
+  <p>这是本机测试输入框。试试连续插入、移动光标和选中文字后替换。</p>
+  <label for="editor">测试输入框</label>
+  <textarea id="editor" spellcheck="false" placeholder="先点这里，再点击悬浮窗里的短语按钮。"></textarea>
+  <div class="bottom"><span id="metrics">0 个字符</span><button id="reset">重置示例</button></div>
+  <small>文字只保留在这个窗口里，关闭即清空。</small>
+</body>
+</html>
