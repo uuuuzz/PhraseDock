@@ -22,18 +22,18 @@ function validateConfig(value) {
     throw new Error('target.windowsPackageFamilyNames 必须是有效的 Windows 程序包系列名称列表。');
   }
   if (!Array.isArray(value.phrases) || value.phrases.length < 1 || value.phrases.length > 12) {
-    throw new Error('请配置 1～12 个短语。');
+    throw new Error('请配置 1～12 个提示词。');
   }
   const ids = new Set();
   const phrases = value.phrases.map(item => {
     if (!item || typeof item.id !== 'string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(item.id) || ids.has(item.id)) {
-      throw new Error('短语 id 只能包含英文、数字、横线、下划线，且不能重复。');
+      throw new Error('提示词 id 只能包含英文、数字、横线、下划线，且不能重复。');
     }
     if (typeof item.label !== 'string' || !item.label.trim() || item.label.length > 16) {
       throw new Error('按钮名称不能为空，且不能超过 16 个字符。');
     }
     if (typeof item.text !== 'string' || !item.text.trim() || item.text.length > 8000 || item.text.includes('\0')) {
-      throw new Error('短语内容不能为空，不能包含空字符，最多 8000 个字符。');
+      throw new Error('提示词内容不能为空，不能包含空字符，最多 8000 个字符。');
     }
     ids.add(item.id);
     return { id: item.id, label: item.label.trim(), text: item.text };

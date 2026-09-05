@@ -8,7 +8,7 @@ import * as PE from 'pe-library';
 import { Resource } from 'resedit';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const packageVersion = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+const { version: packageVersion, productName, productNameZh } = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
 const directory = process.argv[2] || path.join(root, 'dist', packageVersion, `PhraseDock-win32-${process.arch}`);
 const archive = path.join(directory, 'resources/app.asar');
 for (const file of ['src/main.cjs', 'src/preload.cjs', 'src/platform/bridge-client.cjs', 'src/platform/windows.cjs',
@@ -35,7 +35,10 @@ assert.ok(groups.some(group => group.icons.length === count && group.icons.every
   return entry && Buffer.from(entry.bin).equals(expectedImages[index]);
 })), 'Executable icon group must exactly match the seven source ICO images.');
 const version = Resource.VersionInfo.fromEntries(resources.entries)[0];
-assert.ok(version.getAvailableLanguages().some(language => version.getStringValues(language).ProductName === 'PhraseDock'));
+assert.ok(version.getAvailableLanguages().some(language => {
+  const values = version.getStringValues(language);
+  return values.ProductName === productName && values.FileDescription === `${productNameZh} · ${productName}`;
+}));
 if (process.platform === 'win32') {
   const check = spawnSync(process.execPath, [path.join(root, 'scripts/test-native-win.mjs'), helper], { stdio: 'inherit', windowsHide: true });
   assert.equal(check.status, 0);

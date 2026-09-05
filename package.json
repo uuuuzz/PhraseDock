@@ -1,9 +1,10 @@
 {
   "name": "phrasedock",
-  "productName": "PhraseDock",
-  "version": "0.1.1",
+  "productName": "AI Prompt Quick Appender",
+  "productNameZh": "AI 常用提示词快捷追加器",
+  "version": "0.1.2",
   "private": true,
-  "description": "A floating phrase palette that keeps the target editor focused.",
+  "description": "Quickly append frequently used AI prompts at the current cursor without stealing focus.",
   "license": "MIT",
   "repository": {
     "type": "git",

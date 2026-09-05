@@ -44,12 +44,12 @@ struct Target {
 
 func checkTarget(_ request: Request) throws -> Target {
     guard AXIsProcessTrusted() else {
-        throw BridgeFailure(code: "permission", message: "首次使用，请允许 PhraseDock 的辅助功能权限。")
+        throw BridgeFailure(code: "permission", message: "首次使用，请允许 AI Prompt Quick Appender 的辅助功能权限。")
     }
     guard let front = NSWorkspace.shared.frontmostApplication,
           let bundleId = front.bundleIdentifier,
           request.bundleIds.contains(bundleId) else {
-        throw BridgeFailure(code: "wrong-app", message: "先点击 Codex 的输入框，再点短语。")
+        throw BridgeFailure(code: "wrong-app", message: "先点击 Codex 的输入框，再点提示词。")
     }
     if let expectedPid = request.expectedPid, expectedPid != front.processIdentifier {
         throw BridgeFailure(code: "focus-changed", message: "目标窗口已切换，请重新点击输入框。")
@@ -142,11 +142,11 @@ do {
     }
     guard request.action == "insert", let text = request.text,
           !text.isEmpty, text.utf16.count <= 8000, !text.contains("\0") else {
-        throw BridgeFailure(code: "invalid", message: "短语内容无效。")
+        throw BridgeFailure(code: "invalid", message: "提示词内容无效。")
     }
     let flags = CGEventSource.flagsState(.combinedSessionState)
     guard flags.intersection([.maskCommand, .maskControl, .maskAlternate, .maskShift]).isEmpty else {
-        throw BridgeFailure(code: "modifier-held", message: "请松开修饰键，再点击短语。")
+        throw BridgeFailure(code: "modifier-held", message: "请松开修饰键，再点击提示词。")
     }
     let before = attribute(target.element, kAXValueAttribute) as? String
     let range = selectedRange(target.element)
@@ -197,7 +197,7 @@ do {
     reply(base.merging([
         "ok": true, "ready": true, "verified": verified, "clipboardRestored": restored,
         "code": verified ? "inserted" : "sent-unverified",
-        "message": verified ? "已插入，继续点击可组合短语。" : "已发送粘贴，请确认输入框中的结果。"
+        "message": verified ? "已插入，继续点击可组合提示词。" : "已发送粘贴，请确认输入框中的结果。"
     ], uniquingKeysWith: { _, new in new }))
 } catch let failure as BridgeFailure {
     reply(["ok": false, "ready": false, "trusted": AXIsProcessTrusted(), "code": failure.code, "message": failure.message])

@@ -7,7 +7,7 @@ import { prepareElectronWindows } from './prepare-electron-win.mjs';
 
 if (process.platform !== 'win32') throw new Error('请在 Windows 上打包 Windows 应用。');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+const { version, productName, productNameZh } = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
 for (const script of ['build-native-win.mjs', 'test-native-win.mjs']) {
   const result = spawnSync(process.execPath, [path.join(root, 'scripts', script)], { stdio: 'inherit', windowsHide: true });
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -19,7 +19,7 @@ const packaged = await packager({
   electronZipDir: electron.directory,
   appVersion: version, buildVersion: version, executableName: 'PhraseDock',
   icon: path.join(root, 'resources/icons/PhraseDock.ico'),
-  win32metadata: { CompanyName: 'PhraseDock', FileDescription: 'PhraseDock', ProductName: 'PhraseDock',
+  win32metadata: { CompanyName: 'PhraseDock', FileDescription: `${productNameZh} · ${productName}`, ProductName: productName,
     InternalName: 'PhraseDock', OriginalFilename: 'PhraseDock.exe' },
   extraResource: [path.join(root, 'build/windows')],
   ignore: [/^[/\\]build(?:[/\\]|$)/, /^[/\\]dist(?:[/\\]|$)/, /^[/\\]native(?:[/\\]|$)/,
@@ -27,8 +27,8 @@ const packaged = await packager({
 });
 for (const directory of packaged) {
   writeFileSync(path.join(directory, '使用说明.txt'),
-    'PhraseDock Windows\r\n\r\n双击 PhraseDock.exe。请保留整个目录，不要只复制 exe。\r\n' +
-    '先点击 Codex 输入框，再展开 + 并点击短语。只插入，不自动发送。\r\n' +
+    `${productNameZh}\r\n${productName}\r\n\r\n双击 PhraseDock.exe。请保留整个目录，不要只复制 exe。\r\n` +
+    '先点击 Codex 输入框，再展开 + 并点击提示词。只插入，不自动发送。\r\n' +
     '右键中央按钮或系统托盘图标可编辑、刷新、测试、隐藏和退出。\r\n' +
     '个人配置保存在 %APPDATA%\\PhraseDock，更新程序不会覆盖。\r\n' +
     '首次使用请先打开输入测试，检查光标、选区、连续点击和剪贴板。\r\n' +

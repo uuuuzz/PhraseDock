@@ -43,7 +43,7 @@ internal sealed class ClipboardLease : IClipboardLease
             if (!textData.Transfer()) {
                 var recovered = lease.WriteSaved();
                 throw new BridgeFailure(recovered ? "clipboard-write" : "clipboard-restore-failed",
-                    recovered ? "无法写入短语，原剪贴板已恢复。" : "剪贴板写入和恢复失败，请检查剪贴板。");
+                    recovered ? "无法写入提示词，原剪贴板已恢复。" : "剪贴板写入和恢复失败，请检查剪贴板。");
             }
             lease.version = Native.GetClipboardSequenceNumber();
             return lease;

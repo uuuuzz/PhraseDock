@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PhraseBridge</AssemblyName>
     <ApplicationIcon>../../resources/icons/PhraseDock.ico</ApplicationIcon>
-    <Version>0.1.1</Version>
-    <Product>PhraseDock Input Bridge</Product>
+    <Version>0.1.2</Version>
+    <Product>AI Prompt Quick Appender Input Bridge</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Deterministic>true</Deterministic>
     <DebugType>none</DebugType>

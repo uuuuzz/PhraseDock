@@ -27,7 +27,7 @@ internal sealed class Request
             PackageFamilyNames.Any(name => name is null || !Regex.IsMatch(name, @"\A[a-zA-Z0-9][a-zA-Z0-9.-]{2,49}_[a-zA-Z0-9]{13}\z")))
             throw new BridgeFailure("invalid", "程序包身份无效。");
         if (Action == "insert" && (string.IsNullOrWhiteSpace(Text) || Text.Length > 8000 || Text.Contains('\0') || ExpectedPid is not > 0))
-            throw new BridgeFailure("invalid", "短语或输入目标无效。");
+            throw new BridgeFailure("invalid", "提示词或输入目标无效。");
         if (FixtureHwnd is not null && (!long.TryParse(FixtureHwnd, out var handle) || handle <= 0 || FixturePid is not > 0))
             throw new BridgeFailure("invalid", "测试窗口无效。");
     }
@@ -94,7 +94,7 @@ internal static class PasteEngine
             if (request.ExpectedPid is { } pid && target.Pid != pid ||
                 request.ExpectedTarget is { } key && target.Key != key)
                 throw new BridgeFailure("focus-changed", "输入目标已切换，本次没有插入。");
-            if (port.ModifiersHeld()) throw new BridgeFailure("modifier-held", "请松开修饰键，再点击短语。");
+            if (port.ModifiersHeld()) throw new BridgeFailure("modifier-held", "请松开修饰键，再点击提示词。");
             var ready = new BridgeResult { Ok = true, Ready = true, Code = "ready", Message = "光标已就位，点击即可插入。",
                 Pid = target.Pid, AppName = target.Name, TargetKey = target.Key };
             if (request.Action == "status") return ready;
@@ -102,7 +102,7 @@ internal static class PasteEngine
             if (!port.SameTarget(target)) throw new BridgeFailure("focus-changed", "输入光标已改变，本次没有插入。");
             clipboard = port.Publish(request.Text!);
             if (!port.SameTarget(target)) throw new BridgeFailure("focus-changed", "输入光标已改变，本次没有插入。");
-            if (port.ModifiersHeld()) throw new BridgeFailure("modifier-held", "请松开修饰键，再点击短语。");
+            if (port.ModifiersHeld()) throw new BridgeFailure("modifier-held", "请松开修饰键，再点击提示词。");
             attempted = true;
             var count = port.SendPaste();
             eventsSent = count > 0;
@@ -115,7 +115,7 @@ internal static class PasteEngine
                 verificationCompleted = true;
                 result = ready with { Verified = verified, EventsSent = true,
                     Code = verified ? "inserted" : "sent-unverified",
-                    Message = verified ? "已插入，继续点击可组合短语。" : "已发送粘贴，请确认输入框中的结果；后续短语已停止。" };
+                    Message = verified ? "已插入，继续点击可组合提示词。" : "已发送粘贴，请确认输入框中的结果；后续提示词已停止。" };
             }
         } catch (BridgeFailure error) {
             result = attempted ? BridgeResult.Failure("sent-unverified", "输入结果尚未确认，请检查文字，暂不重复点击。") with { EventsSent = true, Verified = false }
@@ -136,7 +136,7 @@ internal static class PasteEngine
         if (result.Code == "clipboard-restore-failed") clipboardStatus = "failed";
         result = result with { ClipboardStatus = clipboardStatus, ClipboardRestored = clipboardStatus == "restored" };
         if (clipboardStatus == "failed") result = result with { Ready = false, Code = "clipboard-restore-failed",
-            Message = "剪贴板未能完整恢复，请检查剪贴板和输入结果；后续短语已停止。" };
+            Message = "剪贴板未能完整恢复，请检查剪贴板和输入结果；后续提示词已停止。" };
         return result;
     }
 }

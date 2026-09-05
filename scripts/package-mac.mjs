@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { APP_IDENTIFIER, signApplication } from './signing.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+const { version, productName } = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (process.platform !== 'darwin') throw new Error('请在 macOS 上打包 Mac 应用。');
 const icons = spawnSync(process.execPath, [path.join(root, 'scripts/build-icons.mjs')], { stdio: 'inherit' });
 if (icons.status !== 0) process.exit(icons.status ?? 1);
@@ -18,7 +18,8 @@ const packaged = await packager({
   appBundleId: APP_IDENTIFIER, appVersion: version,
   icon: path.join(root, 'resources/icons/PhraseDock.icns'),
   executableName: 'PhraseDock',
-  extendInfo: { LSUIElement: true, NSAccessibilityUsageDescription: '把你点击的短语插入当前输入框。' },
+  extendInfo: { LSUIElement: true, CFBundleDisplayName: productName, CFBundleName: productName,
+    NSAccessibilityUsageDescription: '把你点击的常用 AI 提示词追加到当前输入框光标处。' },
   extraResource: [path.join(root, 'build/PhraseBridge')],
   ignore: [/^\/build(?:\/|$)/, /^\/dist(?:\/|$)/, /^\/native(?:\/|$)/,
     /^\/scripts(?:\/|$)/, /^\/test(?:\/|$)/, /^\/docs(?:\/|$)/, /^\/\.git(?:\/|$)/]

@@ -1,5 +1,14 @@
 # Validation
 
+## 0.1.2 — AI Prompt Quick Appender display naming
+
+- Chinese display name: `AI 常用提示词快捷追加器`. English display name: `AI Prompt Quick Appender`.
+- Updated the bilingual README, application/window/tray titles, menu and accessibility labels, input-test page, Windows product metadata and Mac bundle display metadata. Prompt-related user messages now use the Chinese term `提示词`.
+- Explicitly retain the existing `PhraseDock` userData/sessionData directory before acquiring the single-instance lock; the existing two-platform lifecycle test checks this compatibility boundary. No user configuration file was modified by this release build.
+- 28 Node tests, JavaScript syntax checks, Windows native compilation, 18 native pure-logic tests and package verification pass. The actual Windows executable reports the new English ProductName and bilingual FileDescription; packaged HTML titles and package metadata were also read back and checked.
+- Windows build: `dist/0.1.2/PhraseDock-win32-x64/PhraseDock.exe`. ZIP: `dist/PhraseDock-0.1.2-win32-x64.zip`. SHA-256: `14c4b24d701635507d88812d3f67345bb0866abaf1a56dd50feb8fee5431ee94`.
+- No desktop control, GUI launch, screenshot, input events or clipboard access were performed. Mac native edits are display-message changes only; Mac compilation, signing and visual/runtime checks were not rerun on Windows. This release does not establish additional real target-input verification.
+
 ## Windows 0.1.1 — Store Codex identity correction
 
 The user reported `wrong-app` after focusing Codex. A read-only foreground/process query on this computer identified `ChatGPT.exe` with package family `OpenAI.Codex_2p2nqsd0c76g0`. The 0.1.0 executable-only default did not match that desktop host.

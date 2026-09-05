@@ -6,8 +6,15 @@ const path = require('node:path');
 const { validateConfig } = require('./core/config.cjs');
 const { COLLAPSED_SIZE, radialLayout, boundsAroundAnchor, restoreAnchor } = require('./core/radial-layout.cjs');
 const { createPlatform } = require('./platform/index.cjs');
+const { productName, productNameZh } = require('../package.json');
+const applicationTitle = `${productNameZh} · ${productName}`;
 
-app.setName('PhraseDock');
+// Keep configuration and single-instance identity stable across display renames.
+const userDataDirectory = path.join(app.getPath('appData'), 'PhraseDock');
+fs.mkdirSync(userDataDirectory, { recursive: true });
+app.setPath('userData', userDataDirectory);
+app.setPath('sessionData', userDataDirectory);
+app.setName(productName);
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else { app.whenReady().then(start).catch(error => { console.error(error.message); app.quit(); }); }
 
@@ -112,7 +119,7 @@ async function start() {
   anchor = restoreAnchor(saved, workAreas());
   panel = new BrowserWindow({
     ...boundsAroundAnchor(anchor, COLLAPSED_SIZE, workAreas()).bounds,
-    title: 'PhraseDock · 短语浮窗', frame: false, show: false, transparent: true,
+    title: applicationTitle, frame: false, show: false, transparent: true,
     backgroundColor: '#00000000', resizable: false, maximizable: false, minimizable: false,
     fullscreenable: false, alwaysOnTop: true, skipTaskbar: true, focusable: false,
     acceptFirstMouse: true, hasShadow: false,
@@ -139,19 +146,19 @@ async function start() {
 
   handle('app:initial', () => ({ phrases: config.phrases, layout, expanded, platform: process.platform, version: app.getVersion() }));
   handle('phrase:insert', async (id, expectedTarget) => {
-    if (inserting || closing) return { ok: false, code: 'busy', message: '正在插入上一段短语。' };
+    if (inserting || closing) return { ok: false, code: 'busy', message: '正在插入上一段提示词。' };
     if (expectedTarget !== undefined && (typeof expectedTarget !== 'string' || expectedTarget.length > 2048)) {
       return { ok: false, code: 'invalid', message: '输入目标无效。' };
     }
     const phrase = config.phrases.find(item => item.id === id);
-    if (!phrase) return { ok: false, code: 'invalid', message: '短语不存在，请重新加载配置。' };
+    if (!phrase) return { ok: false, code: 'invalid', message: '提示词不存在，请重新加载配置。' };
     inserting = true;
     try {
       // Check now, not only against the possibly stale status shown in the UI.
       const status = await adapter.status();
       lastStatus = status;
       if (status.ready && expectedTarget && expectedTarget !== (status.targetKey || String(status.pid))) {
-        return { ok: false, ready: false, code: 'focus-changed', message: '输入目标已切换，后续短语已停止。' };
+        return { ok: false, ready: false, code: 'focus-changed', message: '输入目标已切换，后续提示词已停止。' };
       }
       const result = status.ready ? await adapter.insert(phrase.text, status.pid, status.targetKey) : status;
       if (result.ok && !result.targetKey) result.targetKey = String(status.pid);
@@ -165,7 +172,7 @@ async function start() {
     if (process.platform !== 'darwin') return;
     systemPreferences.isTrustedAccessibilityClient(true);
     await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
-    resultNotice({ ok: false, code: 'permission', message: '打开 PhraseDock 的辅助功能开关，再回到输入框。' }, 5000);
+    resultNotice({ ok: false, code: 'permission', message: `打开 ${productName} 的辅助功能开关，再回到输入框。` }, 5000);
   });
   handle('app:config', async () => {
     const error = await shell.openPath(configFile);
@@ -182,7 +189,7 @@ async function start() {
 
   await panel.loadFile(path.join(__dirname, 'renderer/index.html'));
   showPanel();
-  if (configProblem) resultNotice({ ok: false, code: 'config', message: `配置有误，暂用默认短语：${configProblem}` }, 7000);
+  if (configProblem) resultNotice({ ok: false, code: 'config', message: `配置有误，暂用默认提示词：${configProblem}` }, 7000);
   createTray();
   pollTimer = setInterval(poll, 1100);
   app.on('second-instance', showPanel);
@@ -204,7 +211,7 @@ function reloadPhrases() {
     layout = radialLayout(config.phrases.length);
     resizePanel();
     panel.webContents.send('config:updated', { phrases: config.phrases, layout });
-    resultNotice({ ok: true, code: 'reloaded', message: '短语已重新加载。' });
+    resultNotice({ ok: true, code: 'reloaded', message: '提示词已重新加载。' });
   } catch (error) { resultNotice({ ok: false, code: 'config', message: error.message }, 6000); }
 }
 
@@ -216,13 +223,13 @@ function permissionSettings() {
 
 function utilityMenu() {
   return [
-    { label: '编辑短语配置', click: () => shell.openPath(configFile) },
-    { label: '重新加载短语', click: reloadPhrases },
+    { label: '编辑提示词配置', click: () => shell.openPath(configFile) },
+    { label: '重新加载提示词', click: reloadPhrases },
     { label: '打开输入测试', click: openFixture },
     ...(process.platform === 'darwin' ? [{ label: '打开辅助功能设置', click: permissionSettings }] : []),
     { type: 'separator' },
-    { label: '隐藏 PhraseDock', click: hidePanel },
-    { label: '退出 PhraseDock', click: () => app.quit() }
+    { label: `隐藏 ${productNameZh}`, click: hidePanel },
+    { label: `退出 ${productNameZh}`, click: () => app.quit() }
   ];
 }
 
@@ -245,9 +252,9 @@ function createTray() {
     : nativeImage.createFromBitmap(pixels, { width: 22, height: 22, scaleFactor: 1 });
   if (process.platform === 'darwin') icon.setTemplateImage(true);
   tray = new Tray(icon);
-  tray.setToolTip('PhraseDock · 短语浮窗');
+  tray.setToolTip(applicationTitle);
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '显示短语浮窗', click: showPanel },
+    { label: `显示 ${productNameZh}`, click: showPanel },
     { type: 'separator' },
     ...utilityMenu()
   ]));
@@ -257,7 +264,7 @@ function createTray() {
 function openFixture() {
   if (fixture && !fixture.isDestroyed()) { fixture.show(); return; }
   fixture = new BrowserWindow({
-    width: 640, height: 460, title: 'PhraseDock · 输入测试',
+    width: 640, height: 460, title: `${productNameZh} · 输入测试`,
     autoHideMenuBar: true,
     ...(process.platform === 'win32' ? { icon: path.join(app.getAppPath(), 'resources/icons/PhraseDock.ico') } : {}),
     backgroundColor: '#f4f5f1', webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }

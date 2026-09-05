@@ -52,14 +52,14 @@ internal sealed class WindowsPort(Request request) : IPastePort
 
     public Target Inspect() => Query(() => {
         var window = Native.GetForegroundWindow();
-        if (window == 0) throw new BridgeFailure("wrong-app", "先点击 Codex 的输入框，再点短语。");
+        if (window == 0) throw new BridgeFailure("wrong-app", "先点击 Codex 的输入框，再点提示词。");
         Native.GetWindowThreadProcessId(window, out var pid);
         if (pid == 0) throw new BridgeFailure("wrong-app", "没有找到目标应用。");
         var isFixture = request.FixturePid == pid && request.FixtureHwnd == window.ToInt64().ToString();
         var executable = Path.GetFileName(Native.ProcessPath(pid));
         var packageFamily = isFixture ? null : Native.PackageFamilyName(pid);
         if (!isFixture && !TargetIdentity.IsAllowed(request, executable, packageFamily))
-            throw new BridgeFailure("wrong-app", "先点击 Codex 的输入框，再点短语。");
+            throw new BridgeFailure("wrong-app", "先点击 Codex 的输入框，再点提示词。");
         if (Native.IntegrityLevel(pid) > Native.IntegrityLevel((uint)Environment.ProcessId))
             throw new BridgeFailure("permission", "目标应用的权限更高，请以普通权限运行目标应用后再试。");
         var focused = AutomationElement.FocusedElement;

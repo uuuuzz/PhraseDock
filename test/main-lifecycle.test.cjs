@@ -13,12 +13,14 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 async function fixture(platform = 'win32', brokenConfig = false) {
   const windows = [], handlers = new Map(), messages = [];
   const app = new EventEmitter();
+  const appPaths = { appData: 'virtual-user-data' };
   let draining;
   const adapter = { configured: null, inserts: 0, status: async () => ({ ok: true, ready: true, code: 'ready', message: 'ready', pid: 42, targetKey: 'first' }),
     insert: async () => { adapter.inserts++; return { ok: true, verified: true, code: 'inserted', message: 'done' }; },
     configure(target) { adapter.configured = target; }, close: () => new Promise(resolve => { draining = resolve; }) };
-  Object.assign(app, { setName(){}, requestSingleInstanceLock: () => true, whenReady: async () => {},
-    setAppUserModelId(){}, getPath: () => 'virtual-user-data', getAppPath: () => root, getVersion: () => '0.1.0', isPackaged: false,
+  Object.assign(app, { setName(value){app.displayName = value;}, requestSingleInstanceLock: () => true, whenReady: async () => {},
+    setPath(name, value){appPaths[name] = value;},
+    setAppUserModelId(){}, getPath: name => appPaths[name], getAppPath: () => root, getVersion: () => require('../package.json').version, isPackaged: false,
     dock: { hide(){} }, quit() { const event = { prevented: false, preventDefault(){this.prevented = true;} }; app.emit('before-quit', event); app.lastQuit = event; } });
   class Window extends EventEmitter {
     constructor(options) { super(); this.options = options; this.bounds = options; this.visible = false;
@@ -57,6 +59,8 @@ test('both platform window definitions retain sandbox, no focus and shared UI di
     assert.equal(options.focusable, false); assert.equal(options.width, 72); assert.equal(options.height, 72);
     assert.equal(options.webPreferences.nodeIntegration, false);
     assert.equal(options.webPreferences.sandbox, true); assert.equal(options.webPreferences.contextIsolation, true);
+    assert.equal(f.app.getPath('userData'), path.join('virtual-user-data', 'PhraseDock'));
+    assert.equal(f.app.getPath('sessionData'), f.app.getPath('userData'));
     if (platform === 'win32') assert.ok(options.icon.endsWith('PhraseDock.ico'));
     else assert.equal(options.type, 'panel');
   }

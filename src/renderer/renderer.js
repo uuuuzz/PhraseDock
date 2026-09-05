@@ -153,7 +153,7 @@ function applyExpanded(value) {
   phraseList.inert = !expanded;
   phraseList.setAttribute('aria-hidden', String(!expanded));
   hub.setAttribute('aria-expanded', String(expanded));
-  hub.setAttribute('aria-label', expanded ? '收起快捷短语' : '展开快捷短语');
+  hub.setAttribute('aria-label', expanded ? '收起快捷提示词' : '展开快捷提示词');
   hub.title = `${stateText}；点击${expanded ? '收起' : '展开'}，拖动外圈移动`;
   if (!expanded) setPointerPassthrough(false);
 }
@@ -161,7 +161,7 @@ function applyExpanded(value) {
 hub.addEventListener('click', async () => {
   if (toggling) return;
   if (processing || insertionQueue.length) {
-    showToast({ message: '正在完成已点击的短语…' });
+    showToast({ message: '正在完成已点击的提示词…' });
     return;
   }
   toggling = true;
