@@ -1,15 +1,51 @@
 # Validation
 
-Current development baseline: macOS on Apple Silicon. Windows and Intel Mac are not yet validated.
+## Windows 0.1.1 — Store Codex identity correction
 
-## Automated checks
+The user reported `wrong-app` after focusing Codex. A read-only foreground/process query on this computer identified `ChatGPT.exe` with package family `OpenAI.Codex_2p2nqsd0c76g0`. The 0.1.0 executable-only default did not match that desktop host.
+
+- Added exact OS package-family matching alongside the existing executable allowlist. Unpackaged `ChatGPT.exe`, the ChatGPT package, and a different publisher are not admitted by the Codex package rule.
+- Old Mac and Windows user configurations receive the missing package-family default in memory. Existing user files are not rewritten.
+- 28 Node tests and 18 native pure-logic tests pass. Native publication, JavaScript/PowerShell syntax, package source/icon parity and packaged helper self-tests pass.
+- Added an explicit read-only diagnostic request that reports process/package/control capability metadata, never input values, selected text or clipboard data. The paste engine rejects diagnostic actions.
+- Produced `dist/0.1.1/PhraseDock-win32-x64/PhraseDock.exe` and `dist/PhraseDock-0.1.1-win32-x64.zip`. Archive SHA-256: `be4866652f4e4002a480699f3cae7906ed484f89a14fb6c9b0479895e023f670`.
+- Versioned output leaves the running old installation intact; users must exit the old single instance before launching the new executable.
+- Foreground identity was verified on the actual computer. A later bounded readiness probe observed Chrome as foreground and correctly returned `allowed: false`; this is not a successful Codex input test. Actual paste and clipboard restoration remain unverified. No mouse/keyboard control, target activation or clipboard access was performed.
+
+## Windows 0.1.0 implementation — 2026-09-05 (historical)
+
+Environment: Windows x64, PowerShell 7.6.5, Node.js 24.14.0, .NET SDK 10.0.301, Electron 44.1.1. The Windows adapter is implemented and packaged. Actual target-input and visual behavior remain unverified.
+
+### Verified without computer control
+
+- `npm run check`: JavaScript syntax passes.
+- `npm test`: 26 Node tests pass. Includes both platform window definitions in an Electron mock, IPC sender rejection, exact fixture authorization, configuration compatibility, queue ordering and cancellation, stale target refusal, process timeout/drain behavior, Unicode transport, and layout boundaries.
+- `npm run build:native`: Windows x64 C# component compiles and publishes with its .NET runtime.
+- `npm run test:windows`: 13 native pure-logic self-tests pass, plus capability and invalid-request protocol checks. These use fake input/clipboard ports; no UIA tree or real clipboard is accessed.
+- `npm run package:win`: produces `dist/PhraseDock-win32-x64/PhraseDock.exe` and bundled resources. The Electron release archive SHA-256 matches `node_modules/electron/checksums.json` from the pinned npm package.
+- `npm run verify:win`: packaged shared source/assets match the working tree byte-for-byte; native runtime files are present; executable branding is PhraseDock; all seven embedded icon images exactly match the existing ICO; the packaged helper passes the same pure self-tests.
+- Visual evidence is limited to source/layout assertions and binary icon-resource comparison. No screenshot or GUI launch was performed.
+- JavaScript and PowerShell scripts pass syntax checks; `git diff --check` passes. Native Mac source and existing icon assets were not modified.
+- `npm run archive:win`: generated `dist/PhraseDock-0.1.0-win32-x64.zip` with adjacent `.sha256`. SHA-256: `623a4dad6813d60769867c44084bae96f15a9be5e84190800ddabb259564c9ff`. This is a local artifact, not a published release.
+
+### Not executed
+
+No computer-control tools, app activation, UI clicks, actual keyboard events, UIA desktop queries, clipboard reads/writes or screenshots were used. Neither the packaged application nor the local GUI fixture was launched. Real Codex input, Windows clipboard formats/ownership, focus retention, tray visibility, DPI/multiple displays, virtual desktops, full-screen behavior and IME composition await the [manual checklist](windows.md).
+
+Mac Swift compilation, signing and actual runtime behavior were not rerun on this Windows host. Shared changes have synthetic regression tests only. Windows ARM64 and Intel/universal Mac remain unverified.
+
+## Historical macOS baseline (before Windows implementation)
+
+The following records describe the earlier Apple Silicon build, not fresh verification of this revision.
+
+### Automated checks
 
 - JavaScript syntax checks pass.
 - Eight Node tests cover configuration validation, Unicode preservation, radial layouts for 1–12 phrases, display-edge clamping, and migration of saved window positions.
 - The Swift macOS bridge compiles successfully.
 - The packaged macOS application passes `codesign --verify --deep --strict`.
 
-## macOS runtime checks
+### macOS runtime checks
 
 - Collapsed mode displays only the central `+` button and keeps hidden phrases inert.
 - Expanding and collapsing the radial menu works through real UI clicks.
@@ -17,7 +53,7 @@ Current development baseline: macOS on Apple Silicon. Windows and Intel Mac are 
 - The accessibility bridge recognizes an editable text area, inserts at the current selection, verifies the resulting text, and restores the clipboard in the local input fixture.
 - The floating panel does not submit text automatically.
 
-## Signing continuity
+### Signing continuity
 
 Development builds use a dedicated local certificate and a designated requirement bound to both `com.phrasedock.desktop` and that certificate. A modified test build produced a different cdhash while preserving the same designated requirement, passed the earlier requirement check, and retained the existing macOS Accessibility authorization.
 
@@ -25,7 +61,8 @@ The private key remains in the developer's login keychain. No private key, PKCS#
 
 ## Remaining release validation
 
-- Implement and test the Windows UI Automation and input adapter.
+- Perform actual Windows input and visual acceptance from `docs/windows.md`; implementation and compilation alone do not establish runtime support.
+- Recheck the Mac application after the shared lifecycle/queue changes.
 - Build or test Intel/universal macOS output if it will be advertised.
 - Use Developer ID signing and notarization for a public macOS binary.
 - Package versioned release assets and publish SHA-256 checksums.

@@ -7,7 +7,7 @@ const subscribe = (channel, listener) => {
 };
 contextBridge.exposeInMainWorld('phraseDock', Object.freeze({
   initial: () => ipcRenderer.invoke('app:initial'),
-  insert: id => ipcRenderer.invoke('phrase:insert', id),
+  insert: (id, expectedTarget) => ipcRenderer.invoke('phrase:insert', id, expectedTarget),
   permission: () => ipcRenderer.invoke('app:permission'),
   config: () => ipcRenderer.invoke('app:config'),
   reload: () => ipcRenderer.invoke('app:reload'),

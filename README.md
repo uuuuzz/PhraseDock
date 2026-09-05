@@ -2,11 +2,22 @@
 
 点击悬浮按钮，把预设文字插入 Codex 当前输入框的光标处。可连续点击组合短语，由你检查后发送。
 
-**当前版本：macOS 最小可用版。**界面、配置与平台适配层分离；Windows 输入适配尚未实现，不应视为已支持 Windows。
+**同一仓库维护 macOS 与 Windows 版本。**两端共用浮窗界面、短语配置和操作逻辑；系统输入分别由 Swift 与 C# 原生组件处理。
 
-项目状态：macOS Apple Silicon 本地构建已验证；Windows 适配和面向公众的安装包仍在开发中。目前没有 GitHub Release。
+项目状态：macOS Apple Silicon 有历史本机构建与测试记录。Windows x64 已实现输入适配并完成编译、纯逻辑测试及便携目录打包；真实 Codex 输入、桌面视觉与焦点体验尚待手动验收。本次未使用电脑操控，也未重新运行 Mac 端。详见 [验证记录](docs/validation.md) 和 [Windows 使用与验收](docs/windows.md)。
 
 ## 使用
+
+### Windows
+
+1. 打开 `dist/0.1.1/PhraseDock-win32-x64/PhraseDock.exe`，保留整个程序目录。升级时先退出旧版浮窗，再打开新版。
+2. 手动点击 Codex 输入框，使输入光标就位。
+3. 点击中央 `+` 展开短语，再点击键帽插入。中央 `−` 收起，拖动外圈移动。
+4. 右键中央按钮或 Windows 系统托盘图标，可编辑、刷新、测试、隐藏或退出。
+
+首次使用建议通过「打开输入测试」手动验收。无需额外安装 .NET 运行时；构建产物已包含它。遇到权限提示时，检查目标是否以管理员身份运行，默认以普通用户权限使用两端程序。
+
+### macOS
 
 1. 打开打包好的 `PhraseDock.app`。建议把应用放在一个固定位置后再授权。
 2. 首次使用，在中央按钮上点右键，选择「打开辅助功能设置」，然后在系统设置中启用 **PhraseDock**。若列表中没有它，用 `+` 添加正在运行的 `PhraseDock.app`。
@@ -20,13 +31,16 @@
 - 「打开输入测试」会打开一个本地测试框，用于测试插入、选区替换、连续点击和换行。关闭该窗口后，恢复为仅接收 Codex 输入。
 - 光标在中间时插入到中间；选中文字时按正常粘贴规则替换选区。
 - 仅鼠标悬停在输入框上不够，需要先点击输入框获得输入焦点。
+- 两端遇到“已发送但未确认”或恢复失败时，停止剩余点击队列；不会自动重试。正常插入保持展开，最多排队 8 次。
+- 收起时如需显示配置错误等通知，菜单会展开以显示完整提示。
 
 ## 自定义短语
 
 点击「编辑短语」，修改 JSON 文件并保存，然后点击「刷新」。初次运行会从项目的 `config/phrases.json` 复制默认值到：
 
 ```text
-~/Library/Application Support/PhraseDock/phrases.json
+macOS:   ~/Library/Application Support/PhraseDock/phrases.json
+Windows: %APPDATA%\PhraseDock\phrases.json
 ```
 
 实际使用的是上面的用户配置，后续构建不会覆盖它。示例：
@@ -34,7 +48,7 @@
 ```json
 {
   "schemaVersion": 1,
-  "target": { "macBundleIds": ["com.openai.codex"] },
+  "target": { "macBundleIds": ["com.openai.codex"], "windowsExecutables": ["Codex.exe"], "windowsPackageFamilyNames": ["OpenAI.Codex_2p2nqsd0c76g0"] },
   "phrases": [
     { "id": "analyze", "label": "先分析", "text": "先分析，暂时不要修改代码。" },
     { "id": "check", "label": "检查", "text": "请检查结果。\n说明已验证和未验证的部分。" }
@@ -43,6 +57,8 @@
 ```
 
 支持 1～12 个按钮，每个短语最多 8000 个 UTF-16 单元。文本按原样插入，包含换行和首尾空白。`id` 必须唯一。错误配置不会覆盖上一次已加载的有效配置；启动时遇到错误会显示提示并临时使用默认短语。
+
+旧 Mac / Windows 0.1.0 配置可以直接使用；缺少 Windows 字段时只在内存中补充默认值，不重写用户文件。Windows 商店版 Codex 的实际窗口进程可能叫 `ChatGPT.exe`，通过系统报告的程序包系列名称 `OpenAI.Codex_2p2nqsd0c76g0` 识别；其他程序包或没有此身份的同名进程不会因此放行。非商店版本继续使用 `windowsExecutables` 文件名白名单，不填写路径或通配符。应用还会核对前台窗口及其聚焦的可编辑控件；允许目标应用内符合条件的其他文本框，不仅限于聊天主输入框。
 
 ## 本地稳定签名与辅助功能权限
 
@@ -69,6 +85,30 @@ tccutil reset Accessibility com.phrasedock.desktop
 切换到稳定证书后的第一版仍需重新关联一次授权；后续内容变化会改变 cdhash，但同一证书和 Bundle ID 生成的指定要求保持一致。换电脑、删除证书或重新生成证书后需要重新授权。该本地证书不等于 Developer ID，也不会让应用通过其他 Mac 的 Gatekeeper；对外发布仍应采用 Developer ID 和公证。
 
 ## 开发与打包
+
+### Windows 开发
+
+要求 Node.js 22.12+、PowerShell 7 和 .NET 10 SDK。本机已以 Windows x64 构建验证。
+
+```powershell
+npm ci
+npm run build:native
+npm run check
+npm test
+npm run test:windows
+npm run package:win
+npm run archive:win
+```
+
+`npm start` 用于手动启动开发版本。Windows 构建使用已有 `.ico`，无需在 Windows 执行 Mac 图标生成或签名脚本。Electron 从官方 GitHub Release 下载，并与锁定 npm 包内的 SHA-256 清单核对。`test:windows` 仅运行纯逻辑自测和协议拒绝测试，不读取桌面或操作剪贴板。
+
+产物位于 `dist/<版本>/PhraseDock-win32-x64/`，当前为 `dist/0.1.1/PhraseDock-win32-x64/`，包含 `PhraseDock.exe` 和原生组件的自带运行时。版本目录避免覆盖正在运行的旧构建。原生组件与 Electron 按本机架构构建；Windows ARM64 入口未实机验证。
+
+排查识别问题可运行 `npm run diagnose:win`。它只报告前台进程/程序包身份和控件能力，不读取输入框内容、选区或剪贴板，不发送按键；光标应停在需要检查的应用中。
+
+`package:win` 会核对打包后的源码、图标资源和原生自测。`archive:win` 生成带外层程序目录的 ZIP 和相邻 `.sha256` 文件，便于保存和后续分发；它们保持在被 Git 忽略的 `dist` 中。
+
+### macOS 开发
 
 要求 Node.js 22.12+。Mac 原生组件需要 Xcode Command Line Tools（Swift）。
 
@@ -99,14 +139,19 @@ src/core/config.cjs         配置校验与窗口位置恢复
 src/core/radial-layout.cjs  放射位置、尺寸和中心锚点计算
 src/renderer/              共用 HTML / CSS / JavaScript 界面
 src/platform/macos.cjs      Mac 桥接进程管理
-src/platform/windows.cjs    Windows 扩展入口（当前明确返回未实现）
+src/platform/windows.cjs    Windows 原生组件调度
+src/platform/bridge-client.cjs 共用进程管理与超时收尾
 native/macos/               Mac 的 Swift 输入组件
+native/windows/             Windows C# 输入组件与纯逻辑自测
 resources/icons/            macOS .icns、Windows .ico 和两套 PNG 母版
 scripts/                   构建、打包和语法检查
 test/                      配置及屏幕变化的关键边界检查
 docs/architecture.md       平台适配约定与后续扩展
 docs/validation.md         本次验证记录
+docs/windows.md            Windows 使用与手动验收
 ```
+
+两个版本的源代码、图标与脚本一起进入 Git。`node_modules/`、`build/`、`dist/` 以及 C# 的 `bin/obj` 均已忽略；用户数据在仓库之外。Mac 应用仍在 Mac 上构建、签名和验收。
 
 ## 输入行为与边界
 
@@ -115,6 +160,8 @@ docs/validation.md         本次验证记录
 - 文本通过标准输入传给本机组件，不经过 shell 命令拼接。不会记录输入框内容或剪贴板内容，不连接远程服务。
 - 暂时使用系统剪贴板，备份所有可读取的数据类型，粘贴后恢复；用户中途复制了新内容时保留新内容。过大（32 MiB 以上）或无法备份的剪贴板会被明确提示。
 - AX 能读取输入结果时会校验插入后的完整文本。若无法确认，显示「已发送粘贴，请确认输入框中的结果」，不自动重试，避免重复输入。此时延迟恢复剪贴板仍可能受极慢的目标应用影响。
+- Windows 使用 UI Automation 读取输入框与选区，发送一次 `Ctrl+V`。剪贴板多格式在锁内备份和替换，恢复前在锁内检查版本。无法安全复制的私有/OLE 格式、调色板或旧式元文件格式会在修改前拒绝；详细边界见 Windows 文档。
+- 插入超时不会强制结束原生进程；组件退出前阻止新插入，应用退出也会等待收尾。异常进程崩溃或系统强制终止仍无法保证剪贴板恢复。
 - 中文输入法仍在组词时，先完成候选词确认，再点击短语。跨输入法的组合态兼容需要进一步实测。
 
 ## 放射式轻立体键帽

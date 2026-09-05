@@ -13,11 +13,17 @@ else { app.whenReady().then(start).catch(error => { console.error(error.message)
 
 let panel, tray, adapter, fixture, config, configFile, positionFile, anchor, layout;
 let lastStatus = null, inserting = false, noticeUntil = 0, expanded = false;
-let quitRequested = false;
+let quitRequested = false, closing = false, drained = false;
 let saveTimer, pollTimer;
 
 function resultNotice(result, duration = 2000) {
   noticeUntil = Date.now() + duration;
+  if (!panel || panel.isDestroyed()) return;
+  // Reveal notices inside the visible menu; a collapsed 72px panel clips them.
+  if (!expanded && panel && !panel.isDestroyed()) {
+    setExpanded(true);
+    panel.webContents.send('menu:set-expanded', true);
+  }
   panel?.webContents.send('phrase:result', result);
 }
 function handle(channel, callback) {
@@ -27,9 +33,15 @@ function handle(channel, callback) {
   });
 }
 function configureAdapter() {
-  const target = { macBundleIds: [...config.target.macBundleIds] };
+  const target = { macBundleIds: [...config.target.macBundleIds], windowsExecutables: [...config.target.windowsExecutables],
+    windowsPackageFamilyNames: [...config.target.windowsPackageFamilyNames] };
   if (fixture && !fixture.isDestroyed()) {
     target.macBundleIds.push(app.isPackaged ? 'com.phrasedock.desktop' : 'com.github.Electron');
+    if (process.platform === 'win32') {
+      const handle = fixture.getNativeWindowHandle();
+      target.fixtureHwnd = (handle.length === 8 ? handle.readBigUInt64LE() : BigInt(handle.readUInt32LE())).toString();
+      target.fixturePid = process.pid;
+    }
   }
   adapter.configure(target);
 }
@@ -45,7 +57,10 @@ function currentSize() { return expanded ? { width: layout.width, height: layout
 function saveAnchorSoon() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    if (anchor) fs.writeFileSync(positionFile, JSON.stringify({ version: 2, x: anchor.x, y: anchor.y }));
+    if (anchor) {
+      try { fs.writeFileSync(positionFile, JSON.stringify({ version: 2, x: anchor.x, y: anchor.y })); }
+      catch { resultNotice({ ok: false, code: 'position', message: '窗口位置暂时无法保存。' }); }
+    }
   }, 250);
 }
 function applyPanelBounds() {
@@ -60,7 +75,7 @@ function setExpanded(value) {
   return { expanded, layout };
 }
 async function poll() {
-  if (inserting || !panel || panel.isDestroyed() || !panel.isVisible()) return;
+  if (inserting || closing || !panel || panel.isDestroyed() || !panel.isVisible()) return;
   const value = await adapter.status();
   lastStatus = value;
   if (Date.now() > noticeUntil && !panel.isDestroyed()) panel.webContents.send('platform:status', value);
@@ -74,6 +89,7 @@ function showPanel() {
 }
 
 async function start() {
+  if (process.platform === 'win32') app.setAppUserModelId('com.phrasedock.desktop');
   const dataDir = app.getPath('userData');
   fs.mkdirSync(dataDir, { recursive: true });
   configFile = path.join(dataDir, 'phrases.json');
@@ -85,7 +101,9 @@ async function start() {
   catch (error) { config = validateConfig(JSON.parse(fs.readFileSync(defaultFile, 'utf8'))); configProblem = error.message; }
   adapter = createPlatform({
     platform: process.platform,
-    helperPath: app.isPackaged ? path.join(process.resourcesPath, 'PhraseBridge') : path.join(app.getAppPath(), 'build/PhraseBridge'),
+    helperPath: process.platform === 'win32'
+      ? path.join(app.isPackaged ? process.resourcesPath : path.join(app.getAppPath(), 'build'), 'windows', 'PhraseBridge.exe')
+      : app.isPackaged ? path.join(process.resourcesPath, 'PhraseBridge') : path.join(app.getAppPath(), 'build/PhraseBridge'),
     target: config.target
   });
   let saved;
@@ -98,6 +116,7 @@ async function start() {
     backgroundColor: '#00000000', resizable: false, maximizable: false, minimizable: false,
     fullscreenable: false, alwaysOnTop: true, skipTaskbar: true, focusable: false,
     acceptFirstMouse: true, hasShadow: false,
+    ...(process.platform === 'win32' ? { icon: path.join(app.getAppPath(), 'resources/icons/PhraseDock.ico'), thickFrame: false } : {}),
     ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false,
       contextIsolation: true, sandbox: true, spellcheck: false }
@@ -119,8 +138,11 @@ async function start() {
   screen.on('display-metrics-changed', resizePanel);
 
   handle('app:initial', () => ({ phrases: config.phrases, layout, expanded, platform: process.platform, version: app.getVersion() }));
-  handle('phrase:insert', async id => {
-    if (inserting) return { ok: false, code: 'busy', message: '正在插入上一段短语。' };
+  handle('phrase:insert', async (id, expectedTarget) => {
+    if (inserting || closing) return { ok: false, code: 'busy', message: '正在插入上一段短语。' };
+    if (expectedTarget !== undefined && (typeof expectedTarget !== 'string' || expectedTarget.length > 2048)) {
+      return { ok: false, code: 'invalid', message: '输入目标无效。' };
+    }
     const phrase = config.phrases.find(item => item.id === id);
     if (!phrase) return { ok: false, code: 'invalid', message: '短语不存在，请重新加载配置。' };
     inserting = true;
@@ -128,7 +150,11 @@ async function start() {
       // Check now, not only against the possibly stale status shown in the UI.
       const status = await adapter.status();
       lastStatus = status;
-      const result = status.ready ? await adapter.insert(phrase.text, status.pid) : status;
+      if (status.ready && expectedTarget && expectedTarget !== (status.targetKey || String(status.pid))) {
+        return { ok: false, ready: false, code: 'focus-changed', message: '输入目标已切换，后续短语已停止。' };
+      }
+      const result = status.ready ? await adapter.insert(phrase.text, status.pid, status.targetKey) : status;
+      if (result.ok && !result.targetKey) result.targetKey = String(status.pid);
       return result;
     } finally {
       inserting = false;
@@ -146,17 +172,9 @@ async function start() {
     if (error) shell.showItemInFolder(configFile);
     return { ok: !error };
   });
-  handle('app:reload', () => {
-    try {
-      readConfig();
-      layout = radialLayout(config.phrases.length);
-      resizePanel();
-      panel.webContents.send('config:updated', { phrases: config.phrases, layout });
-      resultNotice({ ok: true, code: 'reloaded', message: '短语已重新加载。' });
-    } catch (error) { resultNotice({ ok: false, code: 'config', message: error.message }, 6000); }
-  });
-  handle('app:expanded', value => setExpanded(value));
-  handle('window:pointer', ignore => panel.setIgnoreMouseEvents(Boolean(ignore), { forward: true }));
+  handle('app:reload', reloadPhrases);
+  handle('app:expanded', value => { if (typeof value === 'boolean') return setExpanded(value); });
+  handle('window:pointer', ignore => { if (typeof ignore === 'boolean') panel.setIgnoreMouseEvents(ignore, { forward: true }); });
   handle('app:menu', () => showHubMenu());
   handle('app:hide', () => hidePanel());
   handle('app:test', () => openFixture());
@@ -222,8 +240,10 @@ function createTray() {
     const line = ((y === 7 || y === 8) && x >= 6 && x < 16) || ((y === 11 || y === 12) && x >= 6 && x < 13);
     if ((body || tail) && !line) pixels[(y * 22 + x) * 4 + 3] = 255;
   }
-  const icon = nativeImage.createFromBitmap(pixels, { width: 22, height: 22, scaleFactor: 1 });
-  icon.setTemplateImage(true);
+  const icon = process.platform === 'win32'
+    ? nativeImage.createFromPath(path.join(app.getAppPath(), 'resources/icons/PhraseDock.ico'))
+    : nativeImage.createFromBitmap(pixels, { width: 22, height: 22, scaleFactor: 1 });
+  if (process.platform === 'darwin') icon.setTemplateImage(true);
   tray = new Tray(icon);
   tray.setToolTip('PhraseDock · 短语浮窗');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -238,6 +258,8 @@ function openFixture() {
   if (fixture && !fixture.isDestroyed()) { fixture.show(); return; }
   fixture = new BrowserWindow({
     width: 640, height: 460, title: 'PhraseDock · 输入测试',
+    autoHideMenuBar: true,
+    ...(process.platform === 'win32' ? { icon: path.join(app.getAppPath(), 'resources/icons/PhraseDock.ico') } : {}),
     backgroundColor: '#f4f5f1', webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
   });
   configureAdapter();
@@ -251,7 +273,15 @@ function openFixture() {
 app.on('before-quit', event => {
   // Let an in-flight paste restore the clipboard before ending the native process.
   if (inserting) { quitRequested = true; event.preventDefault(); return; }
+  if (!drained && adapter) {
+    event.preventDefault();
+    if (!closing) {
+      closing = true;
+      resultNotice({ ok: false, code: 'closing', message: '正在结束输入组件并恢复剪贴板…' });
+      Promise.resolve(adapter.close()).then(() => { drained = true; app.quit(); });
+    }
+    return;
+  }
   clearTimeout(saveTimer); clearInterval(pollTimer);
-  adapter?.close();
 });
 app.on('window-all-closed', () => app.quit());

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "target": { "macBundleIds": ["com.openai.codex"] },
+  "target": { "macBundleIds": ["com.openai.codex"], "windowsExecutables": ["Codex.exe"], "windowsPackageFamilyNames": ["OpenAI.Codex_2p2nqsd0c76g0"] },
   "phrases": [
     { "id": "analyze", "label": "先分析", "text": "先分析问题、原因和解决方案，暂时不要修改代码。" },
     { "id": "implement", "label": "开始实现", "text": "按上面确认的方案开始实现，完成后说明修改内容和验证结果。" },

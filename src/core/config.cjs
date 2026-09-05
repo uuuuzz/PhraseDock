@@ -7,6 +7,20 @@ function validateConfig(value) {
       bundleIds.some(id => typeof id !== 'string' || !/^[\w.-]{3,160}$/.test(id))) {
     throw new Error('target.macBundleIds 必须是有效的应用标识列表。');
   }
+  // Old macOS files remain valid; defaults are applied in memory only.
+  const windowsExecutables = value.target.windowsExecutables ?? ['Codex.exe'];
+  if (!Array.isArray(windowsExecutables) || windowsExecutables.length < 1 || windowsExecutables.length > 16 ||
+      windowsExecutables.some(name => typeof name !== 'string' || name.trim() !== name || !/^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,120}\.exe$/i.test(name))) {
+    throw new Error('target.windowsExecutables 必须是有效的 exe 文件名列表。');
+  }
+  // The Store-distributed Codex desktop app currently hosts its window in
+  // ChatGPT.exe. Match its stable OS package identity, not that shared filename.
+  const windowsPackageFamilyNames = value.target.windowsPackageFamilyNames ?? ['OpenAI.Codex_2p2nqsd0c76g0'];
+  if (!Array.isArray(windowsPackageFamilyNames) || windowsPackageFamilyNames.length > 16 ||
+      windowsPackageFamilyNames.some(name => typeof name !== 'string' || name.trim() !== name ||
+        !/^[a-zA-Z0-9][a-zA-Z0-9.-]{2,49}_[a-zA-Z0-9]{13}$/.test(name))) {
+    throw new Error('target.windowsPackageFamilyNames 必须是有效的 Windows 程序包系列名称列表。');
+  }
   if (!Array.isArray(value.phrases) || value.phrases.length < 1 || value.phrases.length > 12) {
     throw new Error('请配置 1～12 个短语。');
   }
@@ -24,7 +38,9 @@ function validateConfig(value) {
     ids.add(item.id);
     return { id: item.id, label: item.label.trim(), text: item.text };
   });
-  return { schemaVersion: 1, target: { macBundleIds: [...new Set(bundleIds)] }, phrases };
+  return { schemaVersion: 1, target: { macBundleIds: [...new Set(bundleIds)],
+    windowsExecutables: [...new Set(windowsExecutables.map(name => name.toLowerCase()))],
+    windowsPackageFamilyNames: [...new Set(windowsPackageFamilyNames.map(name => name.toLowerCase()))] }, phrases };
 }
 
 function visibleBounds(saved, areas, width, height) {

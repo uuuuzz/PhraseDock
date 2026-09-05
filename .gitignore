@@ -1,6 +1,8 @@
 node_modules/
 build/
 dist/
+native/windows/bin/
+native/windows/obj/
 .DS_Store
 *.log
 .idea/

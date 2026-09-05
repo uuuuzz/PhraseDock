@@ -5,9 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { signNativeFile } from './signing.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+if (process.platform === 'win32') {
+  const result = spawnSync(process.execPath, [path.join(root, 'scripts/build-native-win.mjs')], { stdio: 'inherit', windowsHide: true });
+  process.exit(result.status ?? 1);
+}
 if (process.platform !== 'darwin') {
-  console.log('当前平台没有原生输入组件；Windows 接口已预留。');
-  process.exit(0);
+  console.error('当前平台没有原生输入组件。');
+  process.exit(1);
 }
 const source = path.join(root, 'native/macos/PhraseBridge.swift');
 const output = path.join(root, 'build/PhraseBridge');

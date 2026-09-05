@@ -34,7 +34,7 @@ function displayState(value) {
   document.body.classList.toggle('ready', Boolean(value.ready));
   document.body.classList.toggle('permission', value.code === 'permission');
   stateText = value.ready ? `${value.appName || 'Codex'} 输入框已就绪` :
-    value.code === 'permission' ? '需要辅助功能权限' : '等待输入光标';
+    value.message || '等待输入光标';
   hub.title = `${stateText}；点击${expanded ? '收起' : '展开'}，拖动外圈移动`;
 }
 
@@ -79,12 +79,13 @@ function updatePending(button, delta) {
 async function processInsertionQueue() {
   if (processing) return;
   processing = true;
+  let expectedTarget;
   while (insertionQueue.length) {
     const item = insertionQueue.shift();
     item.button.classList.add('processing');
     let result;
     try {
-      result = await api.insert(item.id);
+      result = await api.insert(item.id, expectedTarget);
     } catch {
       result = { ok: false, code: 'failed', message: '操作未完成，请重新点击输入框。' };
     }
@@ -95,11 +96,12 @@ async function processInsertionQueue() {
       item.button.classList.add('inserted');
       setTimeout(() => item.button.classList.remove('inserted'), 500);
     }
-    if (!result.ok) {
+    if (!result.ok || result.verified !== true || result.code !== 'inserted') {
       while (insertionQueue.length) updatePending(insertionQueue.shift().button, -1);
       showToast(result);
       break;
     }
+    expectedTarget = result.targetKey;
     if (!insertionQueue.length) showToast(result);
   }
   processing = false;
@@ -179,7 +181,10 @@ hub.addEventListener('contextmenu', event => { event.preventDefault(); api.showM
 
 api.onStatus(value => { if (!processing) displayState(value); });
 api.onResult(value => { displayState(value); showToast(value); });
-api.onConfig(({ phrases, layout }) => renderPhrases(phrases, layout));
+api.onConfig(({ phrases, layout }) => {
+  while (insertionQueue.length) updatePending(insertionQueue.shift().button, -1);
+  renderPhrases(phrases, layout);
+});
 api.onExpanded(value => applyExpanded(value));
 api.initial().then(value => {
   renderPhrases(value.phrases, value.layout);

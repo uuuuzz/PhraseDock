@@ -1,7 +1,7 @@
 # PhraseDock
 
 - This is a desktop utility, not a hosted website. UI/config are shared; OS input code belongs in platform adapters.
-- macOS is the MVP target. Windows is a future adapter and must not be described as working until verified on Windows.
+- macOS has historical MVP validation. The Windows adapter is implemented, but compilation and synthetic tests must not be described as actual target-input or visual verification.
 - Preserve keyboard focus. Never activate a target app, guess a screen coordinate, or send Enter to submit user messages.
 - Never retry a paste after keyboard events have been emitted. Preserve a newer user clipboard instead of restoring stale data.
 - Pass text to native code over stdin JSON; never interpolate text into shell commands, logs, or diagnostics.

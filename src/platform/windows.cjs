@@ -1,13 +1,13 @@
 'use strict';
 
-// Explicit extension point. No untested Windows input implementation is shipped.
-// Implement foreground HWND + focused UIA editable element + SendInput/paste here.
-function createWindowsPlatform() {
-  const unavailable = async () => ({
-    ok: false, ready: false, trusted: false, code: 'unsupported',
-    message: '当前版本支持 macOS，Windows 输入适配待实现。'
-  });
-  return { status: unavailable, insert: unavailable, configure() {}, close() {} };
+const { createBridgeClient } = require('./bridge-client.cjs');
+function createWindowsPlatform(helperPath, initialTarget) {
+  let target = initialTarget;
+  const client = createBridgeClient(helperPath, (action, extra) => ({ action,
+    executables: target.windowsExecutables,
+    packageFamilyNames: target.windowsPackageFamilyNames,
+    fixtureHwnd: target.fixtureHwnd, fixturePid: target.fixturePid, ...extra }));
+  return { ...client, configure(value) { target = value; } };
 }
 
 module.exports = { createWindowsPlatform };

@@ -1,7 +1,7 @@
 {
   "name": "phrasedock",
   "productName": "PhraseDock",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A floating phrase palette that keeps the target editor focused.",
   "license": "MIT",
@@ -15,17 +15,28 @@
   },
   "main": "src/main.cjs",
   "scripts": {
-    "start": "node scripts/build-native.mjs && electron .",
+    "start": "node scripts/start.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "setup:signing": "node scripts/setup-signing.mjs",
     "build:native": "node scripts/build-native.mjs",
     "package:mac": "node scripts/package-mac.mjs",
+    "package:win": "node scripts/package-win.mjs",
+    "test:windows": "node scripts/test-native-win.mjs",
+    "diagnose:win": "node scripts/diagnose-win.mjs",
+    "verify:win": "node scripts/verify-package-win.mjs",
+    "archive:win": "node scripts/archive-win.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --test test/*.test.cjs"
   },
   "devDependencies": {
+    "@electron-internal/extract-zip": "1.0.5",
+    "@electron/asar": "4.3.0",
     "@electron/packager": "20.3.0",
-    "electron": "44.1.1"
+    "electron": "44.1.1",
+    "pe-library": "1.0.1",
+    "resedit": "2.0.3"
   },
-  "engines": { "node": ">=22.12.0" }
+  "engines": {
+    "node": ">=22.12.0"
+  }
 }
