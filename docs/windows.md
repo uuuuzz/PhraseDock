@@ -1,3 +1,5 @@
+**简体中文** | [English](windows.en.md)
+
 # Windows 使用与验收
 
 应用中文名：**AI 常用提示词快捷追加器**。英文名：**AI Prompt Quick Appender**。

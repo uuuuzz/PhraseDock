@@ -1,3 +1,5 @@
+**简体中文** | [English](architecture.en.md)
+
 # 平台边界
 
 显示名称为「AI 常用提示词快捷追加器 / AI Prompt Quick Appender」。`package.json` 维护 `productName` 与 `productNameZh`；主进程和打包元数据读取同一来源。改名后显式将 `userData` / `sessionData` 指向原 `PhraseDock` 目录，保持既有配置和单实例范围。仓库、原生命名空间与应用标识继续沿用内部名称。

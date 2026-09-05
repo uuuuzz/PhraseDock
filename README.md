@@ -1,10 +1,10 @@
+**简体中文** | [English](README.en.md)
+
 # AI 常用提示词快捷追加器
 
 **AI Prompt Quick Appender**
 
 点击快捷按钮，将常用 AI 提示词追加到 Codex 当前输入框的光标处。支持连续点击组合提示词，由你检查后发送。
-
-Quickly append frequently used AI prompts at the current cursor in Codex while keeping the input focused. Combine prompts with successive clicks, review the result, then send it yourself.
 
 同一仓库维护 macOS 与 Windows 版本。两端共用提示词菜单、配置和操作逻辑；系统输入分别由 Swift 与 C# 原生组件处理。
 
