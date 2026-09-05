@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "target": { "macBundleIds": ["com.openai.codex"], "windowsExecutables": ["Codex.exe"], "windowsPackageFamilyNames": ["OpenAI.Codex_2p2nqsd0c76g0"] },
   "phrases": [
-    { "id": "analyze", "label": "先分析", "text": "先分析问题、原因和解决方案，暂时不要修改代码。" },
-    { "id": "implement", "label": "开始实现", "text": "按上面确认的方案开始实现，完成后说明修改内容和验证结果。" },
-    { "id": "continue", "label": "继续", "text": "继续完成当前任务。" },
-    { "id": "minimal", "label": "最小修改", "text": "请做最小范围的修改，保留无关的现有改动。" },
+    { "id": "analyze", "label": "先分析先不做", "text": "先分析先不做。" },
+    { "id": "ask", "label": "有疑问直接问", "text": "有疑问先直接问。" },
+    { "id": "answer_only", "label": "只回答不操作", "text": "只回答当前问题，不要操作项目文件、应用或系统设置。" },
+    { "id": "root_cause", "label": "先找根因不修", "text": "先定位根因和相关证据，暂时不要修改。" },
     { "id": "verify", "label": "检查结果", "text": "请检查实现是否符合需求，并说明已经验证和仍未验证的部分。" },
-    { "id": "explain", "label": "讲清楚", "text": "请用简单清楚的语言解释，并给一个具体例子。" }
+    { "id": "align", "label": "对齐理解", "text": "先复述你对需求的理解，有歧义直接问。" }
   ]
 }
