@@ -1,0 +1,12 @@
+assets/*.mp3
+assets/*.wav
+assets/*.html
+assets/*.json
+*.mp4
+*.wav
+*_cover.png
+qc/
+data.js
+timing.json
+render-manifest.json
+*.log

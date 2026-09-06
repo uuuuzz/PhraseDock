@@ -8,7 +8,7 @@ import { prepareElectronWindows } from './prepare-electron-win.mjs';
 if (process.platform !== 'win32') throw new Error('请在 Windows 上打包 Windows 应用。');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { version, productName, productNameZh } = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
-for (const script of ['build-native-win.mjs', 'test-native-win.mjs']) {
+for (const script of ['test-clipboard-win.mjs', 'build-native-win.mjs', 'test-native-win.mjs']) {
   const result = spawnSync(process.execPath, [path.join(root, 'scripts', script)], { stdio: 'inherit', windowsHide: true });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

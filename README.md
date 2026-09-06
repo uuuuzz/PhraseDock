@@ -14,7 +14,7 @@
 
 ### Windows
 
-1. 打开 `dist/0.1.2/PhraseDock-win32-x64/PhraseDock.exe`，保留整个程序目录。升级时先退出旧版追加器，再打开新版。
+1. 打开 `dist/0.1.3/PhraseDock-win32-x64/PhraseDock.exe`，保留整个程序目录。升级时先退出旧版追加器，再打开新版。
 2. 手动点击 Codex 输入框，使输入光标就位。
 3. 点击中央 `+` 展开提示词，再点击键帽插入。中央 `−` 收起，拖动外圈移动。
 4. 右键中央按钮或 Windows 系统托盘图标，可编辑、刷新、测试、隐藏或退出。
@@ -110,7 +110,7 @@ npm run archive:win
 
 `npm start` 用于手动启动开发版本。Windows 构建使用已有 `.ico`，无需在 Windows 执行 Mac 图标生成或签名脚本。Electron 从官方 GitHub Release 下载，并与锁定 npm 包内的 SHA-256 清单核对。`test:windows` 仅运行纯逻辑自测和协议拒绝测试，不读取桌面或操作剪贴板。
 
-产物位于 `dist/<版本>/PhraseDock-win32-x64/`，当前为 `dist/0.1.2/PhraseDock-win32-x64/`，包含 `PhraseDock.exe` 和原生组件的自带运行时。版本目录避免覆盖正在运行的旧构建。原生组件与 Electron 按本机架构构建；Windows ARM64 入口未实机验证。
+产物位于 `dist/<版本>/PhraseDock-win32-x64/`，当前为 `dist/0.1.3/PhraseDock-win32-x64/`，包含 `PhraseDock.exe` 和原生组件的自带运行时。版本目录避免覆盖正在运行的旧构建。原生组件与 Electron 按本机架构构建；Windows ARM64 入口未实机验证。
 
 排查识别问题可运行 `npm run diagnose:win`。它只报告前台进程/程序包身份和控件能力，不读取输入框内容、选区或剪贴板，不发送按键；光标应停在需要检查的应用中。
 

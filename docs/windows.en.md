@@ -4,11 +4,11 @@
 
 English product name: **AI Prompt Quick Appender**. Chinese display name: **AI 常用提示词快捷追加器**.
 
-The Windows x64 implementation, compilation, and portable packaging are complete. The initial implementation did not perform real desktop tests. Version 0.1.1 investigated the actual foreground process/package identity after a user report and added read-only control diagnostics. Real pasting and clipboard restoration remain unverified. The recorded investigation did not control the mouse or keyboard, activate or switch the target app, send text, or access the real clipboard.
+The Windows x64 implementation, compilation, and portable packaging are complete. Version 0.1.1 added read-only foreground identity diagnostics; 0.1.3 fixes rejection of an initial empty clipboard with sequence zero. This investigation read clipboard status metadata and checked an empty clipboard in a separate window station. It did not read or write user clipboard contents, send mouse/keyboard input, or switch target applications. Real pasting and clipboard restoration remain unverified; see `validation.md`.
 
 ## Launching and updating
 
-- Exit the older version, then open `dist/0.1.2/PhraseDock-win32-x64/PhraseDock.exe`. Keep the entire directory together. You can create a desktop shortcut to that executable. A single-instance lock means that starting a new copy while the old one is running brings back the old instance.
+- Exit the older version, then open `dist/0.1.3/PhraseDock-win32-x64/PhraseDock.exe`. Keep the entire directory together. You can create a desktop shortcut to that executable. A single-instance lock means that starting a new copy while the old one is running brings back the old instance.
 - Application and window icons use `resources/icons/PhraseDock.ico`. The floating menu shares the Mac HTML/CSS and interaction code. Windows uses the color icon in its tray; the Mac menu bar uses a monochrome template.
 - The main window is configured to stay on top without taking focus or occupying a taskbar entry. Drag its central outer ring to move it; transparent space passes mouse input through. System menus and font rendering follow the operating system.
 - User prompts are stored in `%APPDATA%\PhraseDock\phrases.json`, with `window.json` alongside it for position. Moving or rebuilding the application does not overwrite these files.
@@ -42,6 +42,8 @@ On Windows, queued prompts bind to the first operation's process, window, and co
 
 The implementation handles copyable HGLOBAL formats, such as text, HTML/RTF, DIB images, file lists, and some registered formats. Bitmaps and enhanced metafiles use their corresponding Windows copy/free APIs. Backup and initial replacement share one clipboard lock. The total backup limit is 32 MiB and the format-count limit is 256.
 
+An initial empty clipboard can have sequence zero. Version 0.1.3 establishes accessibility through successful opening and format enumeration. The post-write sequence is still recorded and compared under the restoration lock, preserving newer user copies.
+
 Unreadable or oversized data, private handles, owner-display formats, palettes, legacy metafile-picture data, and specified OLE object formats are rejected before modification. Implementing these format paths does not establish that every real clipboard object has been tested. Clipboard contention receives a bounded wait; restoration failure remains visible to the user.
 
 A timed-out insert process keeps running to finish cleanup and blocks new pastes. Quitting also waits for it. Read-only status processes may be stopped after timeout. System crashes, forced termination, exceptionally slow targets, and special IME behavior still require real-world validation.
@@ -68,7 +70,7 @@ A timed-out insert process keeps running to finish cleanup and blocks new pastes
 
 ## Building
 
-Install Node.js 22.12+, PowerShell 7, and the .NET 10 SDK. Run `npm ci`, then `npm run package:win`. The packaged application includes its .NET runtime, so end users do not need the SDK. After `npm run build:native`, run `npm run test:windows` for pure-logic and protocol checks using fake input/clipboard ports.
+Install Node.js 22.12+, PowerShell 7, and the .NET 10 SDK. Run `npm ci`, then `npm run package:win`. The packaged application includes its .NET runtime, so end users do not need the SDK. After `npm run build:native`, run `npm run test:windows`. This runs the shipping `ClipboardLease.cs` against an in-memory native API shim, plus pure transaction/protocol self-tests. Packaging runs these checks too; none access the actual desktop.
 
 This is a local portable build. It has no Windows installer, automatic updater, or Authenticode signature. Binary artifacts remain in local `dist`; they have not been published as a Release.
 

@@ -23,7 +23,9 @@ internal sealed class ClipboardLease : IClipboardLease
         try {
             using var textData = SavedFormat.FromBytes(13, Encoding.Unicode.GetBytes(text + '\0'));
             using var access = Open(owner);
-            if (Native.GetClipboardSequenceNumber() == 0) throw new BridgeFailure("clipboard-unavailable", "无法读取剪贴板版本。");
+            // A pristine clipboard can have sequence zero. Successful opening
+            // and format enumeration establish access; the sequence is only a
+            // change token for restoring our replacement below.
             // Snapshot and initial replacement share the same Windows clipboard
             // lock, so a new user copy cannot slip between them.
             long total = 0;

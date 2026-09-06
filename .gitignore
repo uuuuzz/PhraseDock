@@ -3,6 +3,8 @@ build/
 dist/
 native/windows/bin/
 native/windows/obj/
+test/windows-clipboard/bin/
+test/windows-clipboard/obj/
 .DS_Store
 *.log
 .idea/

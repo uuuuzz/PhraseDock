@@ -15,7 +15,7 @@ const capabilities = run({ action: 'capabilities' });
 assert.equal(capabilities.platform, 'win32');
 const result = run({ action: 'self-test' });
 assert.equal(result.ok, true);
-assert.ok(result.passed >= 13);
+assert.ok(result.passed >= 19);
 assert.equal(run({ action: 'unknown' }).code, 'invalid');
 assert.equal(run({ action: 'insert', executables: ['Codex.exe'], text: '\0', expectedPid: 42 }).code, 'invalid');
 console.log(`Windows native self-tests: ${result.passed} passed; protocol rejection checks passed. No desktop or clipboard operations.`);

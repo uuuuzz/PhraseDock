@@ -1,0 +1,8 @@
+*.mp4
+*.wav
+*_cover.png
+frames/
+qc/
+data.js
+render-manifest.json
+*.log

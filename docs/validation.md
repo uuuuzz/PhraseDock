@@ -1,5 +1,16 @@
 # Validation
 
+## Windows 0.1.3 — initial empty clipboard correction — 2026-09-06
+
+- The reported `无法读取剪贴板版本。` came from treating `GetClipboardSequenceNumber() == 0` as an unconditional access failure before backup. A read-only probe in a noninteractive window station observed sequence `0`, successful clipboard opening, zero formats, and successful enumeration. The interactive clipboard sequence remained `4` before and after the probe. This verifies a valid empty-state boundary; it does not reconstruct the user's original desktop state.
+- Removed the pre-publication zero-sequence rejection. Successful `OpenClipboard` and error-checked format enumeration determine accessibility. Backup/replacement still share one lock; restoration still compares the post-write sequence under its lock and preserves a newer user copy. No input retry or focus behavior changed.
+- Added `test/windows-clipboard`, which links the shipping `ClipboardLease.cs` and `PasteEngine.cs` into a separate executable with an in-memory `Native` API shim. All **8 lease regressions pass**: initial empty/zero state, original-text restoration, a newer copy after empty startup, sequence rollover to zero, enumeration failure, unreadable data, clipboard contention, and replacement failure recovery. They also check lock, owner-window, and memory cleanup. Before the fix, the same suite passed 6/8, failing both successful-publication cases that start from empty sequence zero.
+- **19 native pure-logic tests pass**, including a new check that clipboard preparation failure emits no input, performs no retry, and reports the clipboard untouched. Capability and invalid-request protocol checks pass. **28 Node tests** and JavaScript syntax checks pass.
+- Windows x64 native compilation and portable packaging pass. The packaged shared source/assets match the working tree, and `PhraseBridge.exe`/`PhraseBridge.dll` match the freshly compiled binaries byte-for-byte. The packaged helper passes the same 19 pure-logic tests; executable branding and all seven ICO images pass verification.
+- Local executable: `dist/0.1.3/PhraseDock-win32-x64/PhraseDock.exe`. Exit the running 0.1.1 instance before opening it; the single-instance lock otherwise retains the old application. Existing installations were not overwritten. The user's `phrases.json` SHA-256 is unchanged before/after packaging.
+- Local archive: `dist/PhraseDock-0.1.3-win32-x64.zip`, with adjacent `.sha256`. SHA-256: `22b20360bdbc35589623798f6152aa31075437144aec4a868add73021815b6cd`. No commit, push, or release publication was performed.
+- **Verification limits:** the new lease regressions use a simulated OS API, not the interactive clipboard. The preceding investigation read only actual clipboard metadata and allowed-app control metadata. No user clipboard contents were read or written, no target app was activated, no keyboard/mouse events were sent, and no GUI/screenshot or real Codex paste was tested. Actual empty-clipboard startup, target input, clipboard restoration, and visual acceptance still require the Windows manual checklist. Mac and Windows ARM64 were not rebuilt or tested.
+
 ## 0.1.2 — AI Prompt Quick Appender display naming
 
 - Chinese display name: `AI 常用提示词快捷追加器`. English display name: `AI Prompt Quick Appender`.

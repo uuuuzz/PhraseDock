@@ -14,7 +14,7 @@ This is the English documentation. The application currently uses Chinese menu l
 
 ### Windows
 
-1. Open `dist/0.1.2/PhraseDock-win32-x64/PhraseDock.exe` and keep the entire application directory together. Exit the previous version before opening the new one.
+1. Open `dist/0.1.3/PhraseDock-win32-x64/PhraseDock.exe` and keep the entire application directory together. Exit the previous version before opening the new one.
 2. Click the Codex input field so that the caret is active.
 3. Click the central `+` to expand the prompts, then click a keycap to insert its text. Click `−` to collapse the menu, or drag the outer ring to move it.
 4. Right-click the central button or the Windows tray icon to edit or reload prompts, open the input test, hide the app, or quit.
@@ -120,7 +120,7 @@ Run `npm start` to launch the development application manually. Windows uses the
 
 `test:windows` runs pure-logic and invalid-request protocol checks. It does not inspect the desktop or access the real clipboard.
 
-Output is placed in `dist/<version>/PhraseDock-win32-x64/`, currently `dist/0.1.2/PhraseDock-win32-x64/`. Keep `PhraseDock.exe` together with the native component and its bundled runtime. Versioned output avoids overwriting a running older build. Both Electron and the native component target the build machine's architecture; Windows ARM64 has not been verified on hardware.
+Output is placed in `dist/<version>/PhraseDock-win32-x64/`, currently `dist/0.1.3/PhraseDock-win32-x64/`. Keep `PhraseDock.exe` together with the native component and its bundled runtime. Versioned output avoids overwriting a running older build. Both Electron and the native component target the build machine's architecture; Windows ARM64 has not been verified on hardware.
 
 For identification issues, run `npm run diagnose:win` while the intended target has focus. This explicit read-only command reports foreground process/package identity and control capabilities. It does not return input text, selections, or clipboard contents, and does not send keys.
 

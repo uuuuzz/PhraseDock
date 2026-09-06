@@ -22,6 +22,10 @@ const helper = path.join(directory, 'resources/windows/PhraseBridge.exe');
 for (const name of ['PhraseBridge.exe', 'PhraseBridge.dll', 'coreclr.dll', 'UIAutomationClient.dll']) {
   assert.ok(existsSync(path.join(directory, 'resources/windows', name)), `Native runtime missing: ${name}`);
 }
+for (const name of ['PhraseBridge.exe', 'PhraseBridge.dll']) {
+  assert.deepEqual(readFileSync(path.join(directory, 'resources/windows', name)),
+    readFileSync(path.join(root, 'build/windows', name)), `Packaged native component differs from the current build: ${name}`);
+}
 const resources = PE.NtExecutableResource.from(PE.NtExecutable.from(readFileSync(path.join(directory, 'PhraseDock.exe'))));
 const ico = readFileSync(path.join(root, 'resources/icons/PhraseDock.ico'));
 const count = ico.readUInt16LE(4);
@@ -43,4 +47,4 @@ if (process.platform === 'win32') {
   const check = spawnSync(process.execPath, [path.join(root, 'scripts/test-native-win.mjs'), helper], { stdio: 'inherit', windowsHide: true });
   assert.equal(check.status, 0);
 }
-console.log('Package verified: source parity, runtime files, executable branding, seven exact ICO images, packaged native self-tests. GUI not launched.');
+console.log('Package verified: source/native binary parity, runtime files, executable branding, seven exact ICO images, packaged native self-tests. GUI not launched.');

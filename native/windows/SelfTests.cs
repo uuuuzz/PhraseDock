@@ -53,6 +53,12 @@ internal static class SelfTests
             var port = new FakePort(); var request = Request(); request.Action = "status";
             Check(PasteEngine.Execute(request, port).Ready && port.PublishCalls == 0 && port.SendCalls == 0);
         });
+        Test("clipboard preparation failure never sends or retries input", () => {
+            var port = new FakePort { ThrowOnPublish = true };
+            var result = PasteEngine.Execute(Request(), port);
+            Check(!result.Ok && result.Code == "clipboard-unavailable" && !result.EventsSent &&
+                result.ClipboardStatus == "untouched" && port.PublishCalls == 1 && port.SendCalls == 0 && port.Lease.Restores == 0);
+        });
         Test("wrong target and modifier refuse before clipboard", () => {
             foreach (var port in new[] { new FakePort { TargetKey = "changed" }, new FakePort { Modifier = true } }) {
                 Check(!PasteEngine.Execute(Request(), port).Ok && port.PublishCalls == 0 && port.SendCalls == 0);
@@ -103,7 +109,7 @@ internal static class SelfTests
     private sealed class FakePort : IPastePort
     {
         internal string TargetKey = "target";
-        internal bool Modifier, ModifierAfterPublish, ThrowOnVerify;
+        internal bool Modifier, ModifierAfterPublish, ThrowOnVerify, ThrowOnPublish;
         internal bool FocusAfterPublish = true, Acknowledged = true;
         internal int PublishCalls, SendCalls, Count = 4;
         internal readonly FakeLease Lease = new();
@@ -111,7 +117,12 @@ internal static class SelfTests
         public bool ModifiersHeld() => Modifier || PublishCalls > 0 && ModifierAfterPublish;
         public bool SameTarget(Target target) => PublishCalls == 0 || FocusAfterPublish;
         public Selection ReadSelection(Target target) => new("ab", "a", "b");
-        public IClipboardLease Publish(string text) { PublishCalls++; return Lease; }
+        public IClipboardLease Publish(string text)
+        {
+            PublishCalls++;
+            if (ThrowOnPublish) throw new BridgeFailure("clipboard-unavailable", "Clipboard preparation failed.");
+            return Lease;
+        }
         public int SendPaste() { SendCalls++; return Count; }
         public bool Verify(Target target, Selection? selection, string text) { if (ThrowOnVerify) throw new Exception(); return Acknowledged; }
         public void Pause(int milliseconds) { }
