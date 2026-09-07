@@ -25,7 +25,7 @@ The radial menu persists its screen-space center. Before expansion, the main pro
 `src/platform/index.cjs` selects an adapter with these methods:
 
 ```js
-configure(target)                         // Update allowed target applications
+configure(target)                         // Update the platform target policy
 status()                                  // Promise<Status>
 insert(text, expectedPid, expectedTarget)  // Promise<Result>; third argument optional
 close()                                   // Promise<void>; wait for insert cleanup
@@ -45,7 +45,7 @@ The native protocol is one stdin JSON request and one stdout JSON response. Prom
 
 ## Windows implementation
 
-1. `schemaVersion: 1` remains compatible. Windows target fields are `windowsExecutables` and `windowsPackageFamilyNames`; missing fields receive in-memory defaults without rewriting user files.
+1. `schemaVersion: 1` remains compatible. macOS uses `target.macMode` (`all` / `allowlist`) with `target.macBundleIds`; Windows uses `windowsExecutables` and `windowsPackageFamilyNames`. Missing fields receive in-memory defaults without rewriting user files.
 2. `WindowsPort.cs` checks foreground ownership, executable or package identity, integrity level, focused-control ancestry, and editability. The Store Codex rule uses its OS-reported package family rather than broadly allowing its `ChatGPT.exe` host filename. Read-only UIA queries use background MTA workers with bounded waits.
 3. `PasteEngine.cs` manages focus/modifier checks, dispatch, acknowledgement, and cleanup in `finally`. `ClipboardLease.cs` holds a lock across backup/replacement and checks the sequence number under the restoration lock. Unsafe formats are rejected before modification.
 4. The shared Electron panel uses `focusable: false`, transparency, and mouse pass-through. Windows adds ICO metadata, AppUserModelID, and its tray icon. Actual desktop behavior awaits manual acceptance.

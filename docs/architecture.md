@@ -19,7 +19,7 @@ Renderer → preload 的有限 IPC → main 查询目标 → platform.insert →
 `src/platform/index.cjs` 选择平台实现。各实现提供：
 
 ```js
-configure(target)                 // 更新允许的目标应用
+configure(target)                 // 更新平台目标策略
 status()                         // Promise<Status>
 insert(text, expectedPid, expectedTarget) // Promise<Result>，第三参数可选
 close()                          // Promise<void>，等待插入组件收尾
@@ -35,7 +35,7 @@ Renderer 最多排队 8 次，只有 `code: inserted` 且 `verified: true` 才�
 
 ## Windows 实现
 
-1. `schemaVersion: 1` 保持兼容，Windows 字段为 `target.windowsExecutables` 和 `target.windowsPackageFamilyNames`；旧文件在内存补默认值，不写回用户配置。
+1. `schemaVersion: 1` 保持兼容。macOS 使用 `target.macMode`（`all` / `allowlist`）和 `target.macBundleIds`；Windows 使用 `target.windowsExecutables` 和 `target.windowsPackageFamilyNames`。旧文件在内存补默认策略，不写回用户配置。
 2. `WindowsPort.cs` 检查前台窗口归属、允许的 exe 文件名或程序包系列名称、权限等级、聚焦 UIA 控件祖先和可编辑状态。Windows 商店版 Codex 使用系统查询所得的包身份匹配，避免将其实际宿主 `ChatGPT.exe` 误判或泛化放行其他同名应用。UIA 只读调用在后台 MTA 工作线程中执行，使用有界等待。
 3. `PasteEngine.cs` 管理焦点/修饰键检查、发送、确认和 finally 清理。`ClipboardLease.cs` 在同一个剪贴板锁内备份与替换，在恢复锁内检查序列号。无法可靠复制的格式提前拒绝。
 4. 共用 Electron 浮窗使用 `focusable: false`、透明背景、鼠标穿透；Windows 添加 ICO、AppUserModelID 和托盘图标。实际效果待本机手动验收。

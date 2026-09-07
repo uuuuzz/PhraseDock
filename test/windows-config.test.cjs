@@ -6,6 +6,7 @@ const defaults = require('../config/phrases.json');
 
 test('old macOS configurations gain Windows defaults without modifying user data', () => {
   const old = structuredClone(defaults);
+  delete old.target.macMode;
   delete old.target.windowsExecutables;
   delete old.target.windowsPackageFamilyNames;
   old.phrases[0].text = '个人短语\n 😀 ';
@@ -14,6 +15,7 @@ test('old macOS configurations gain Windows defaults without modifying user data
   assert.equal(JSON.stringify(old), before);
   assert.deepEqual(result.target.windowsExecutables, ['codex.exe']);
   assert.deepEqual(result.target.windowsPackageFamilyNames, ['openai.codex_2p2nqsd0c76g0']);
+  assert.equal(result.target.macMode, 'allowlist');
   assert.equal(result.phrases[0].text, old.phrases[0].text);
 });
 

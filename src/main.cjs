@@ -40,7 +40,7 @@ function handle(channel, callback) {
   });
 }
 function configureAdapter() {
-  const target = { macBundleIds: [...config.target.macBundleIds], windowsExecutables: [...config.target.windowsExecutables],
+  const target = { macMode: config.target.macMode, macBundleIds: [...config.target.macBundleIds], windowsExecutables: [...config.target.windowsExecutables],
     windowsPackageFamilyNames: [...config.target.windowsPackageFamilyNames] };
   if (fixture && !fixture.isDestroyed()) {
     target.macBundleIds.push(app.isPackaged ? 'com.phrasedock.desktop' : 'com.github.Electron');

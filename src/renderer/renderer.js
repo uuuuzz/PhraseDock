@@ -33,7 +33,7 @@ document.addEventListener('mouseleave', () => setPointerPassthrough(expanded));
 function displayState(value) {
   document.body.classList.toggle('ready', Boolean(value.ready));
   document.body.classList.toggle('permission', value.code === 'permission');
-  stateText = value.ready ? `${value.appName || 'Codex'} 输入框已就绪` :
+  stateText = value.ready ? `${value.appName || '当前应用'} 输入框已就绪` :
     value.message || '等待输入光标';
   hub.title = `${stateText}；点击${expanded ? '收起' : '展开'}，拖动外圈移动`;
 }

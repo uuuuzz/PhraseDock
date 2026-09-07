@@ -5,6 +5,7 @@ import Foundation
 // One request on stdin, one JSON response on stdout. Never output editor/clipboard text.
 struct Request: Decodable {
     let action: String
+    let mode: String?
     let bundleIds: [String]
     let text: String?
     let expectedPid: Int32?
@@ -47,9 +48,19 @@ func checkTarget(_ request: Request) throws -> Target {
         throw BridgeFailure(code: "permission", message: "首次使用，请允许 AI Prompt Quick Appender 的辅助功能权限。")
     }
     guard let front = NSWorkspace.shared.frontmostApplication,
-          let bundleId = front.bundleIdentifier,
-          request.bundleIds.contains(bundleId) else {
-        throw BridgeFailure(code: "wrong-app", message: "先点击 Codex 的输入框，再点提示词。")
+          let bundleId = front.bundleIdentifier else {
+        throw BridgeFailure(code: "wrong-app", message: "没有找到当前应用，请重新点击输入框。")
+    }
+    let explicitlyAllowed = request.bundleIds.contains(bundleId)
+    let blockedInUniversalMode: Set<String> = [
+        "com.phrasedock.desktop", "com.github.Electron",
+        "com.apple.SecurityAgent", "com.apple.loginwindow"
+    ]
+    let universallyAllowed = request.mode == "all" && !blockedInUniversalMode.contains(bundleId)
+    guard explicitlyAllowed || universallyAllowed else {
+        throw BridgeFailure(code: "wrong-app", message: request.mode == "all"
+                            ? "请先点击其他应用中的输入框。"
+                            : "当前应用不在允许列表中。")
     }
     if let expectedPid = request.expectedPid, expectedPid != front.processIdentifier {
         throw BridgeFailure(code: "focus-changed", message: "目标窗口已切换，请重新点击输入框。")
@@ -68,7 +79,7 @@ func checkTarget(_ request: Request) throws -> Target {
         throw BridgeFailure(code: "no-editor", message: "光标不在可输入的文本框里。")
     }
     return Target(pid: front.processIdentifier, bundleId: bundleId,
-                  name: bundleId == "com.openai.codex" ? "Codex" : (front.localizedName ?? "输入测试"),
+                  name: front.localizedName ?? "当前应用",
                   app: app, element: element, role: role)
 }
 
@@ -201,6 +212,9 @@ do {
     ], uniquingKeysWith: { _, new in new }))
 } catch let failure as BridgeFailure {
     reply(["ok": false, "ready": false, "trusted": AXIsProcessTrusted(), "code": failure.code, "message": failure.message])
-} catch {
+} catch is DecodingError {
     reply(["ok": false, "ready": false, "trusted": AXIsProcessTrusted(), "code": "invalid", "message": "系统组件收到无效请求。"])
+} catch {
+    reply(["ok": false, "ready": false, "trusted": AXIsProcessTrusted(), "code": "system-error",
+           "message": "系统组件暂时不可用，请重新点击输入框后再试。"])
 }

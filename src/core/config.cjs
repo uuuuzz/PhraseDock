@@ -2,8 +2,13 @@
 
 function validateConfig(value) {
   if (!value || value.schemaVersion !== 1) throw new Error('schemaVersion 必须为 1。');
-  const bundleIds = value.target?.macBundleIds;
-  if (!Array.isArray(bundleIds) || bundleIds.length < 1 || bundleIds.length > 16 ||
+  // Old files remain allowlisted; only new defaults opt into universal Mac input.
+  const macMode = value.target?.macMode ?? 'allowlist';
+  if (!['all', 'allowlist'].includes(macMode)) {
+    throw new Error('target.macMode 必须是 all 或 allowlist。');
+  }
+  const bundleIds = value.target?.macBundleIds ?? [];
+  if (!Array.isArray(bundleIds) || (macMode === 'allowlist' && bundleIds.length < 1) || bundleIds.length > 16 ||
       bundleIds.some(id => typeof id !== 'string' || !/^[\w.-]{3,160}$/.test(id))) {
     throw new Error('target.macBundleIds 必须是有效的应用标识列表。');
   }
@@ -38,7 +43,7 @@ function validateConfig(value) {
     ids.add(item.id);
     return { id: item.id, label: item.label.trim(), text: item.text };
   });
-  return { schemaVersion: 1, target: { macBundleIds: [...new Set(bundleIds)],
+  return { schemaVersion: 1, target: { macMode, macBundleIds: [...new Set(bundleIds)],
     windowsExecutables: [...new Set(windowsExecutables.map(name => name.toLowerCase()))],
     windowsPackageFamilyNames: [...new Set(windowsPackageFamilyNames.map(name => name.toLowerCase()))] }, phrases };
 }

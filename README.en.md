@@ -2,11 +2,11 @@
 
 # AI Prompt Quick Appender
 
-Quickly append frequently used AI prompts at the current cursor in Codex while keeping the input focused. Combine prompts with successive clicks, review the result, then send it yourself.
+Quickly append frequently used AI prompts at the current cursor while keeping the input focused. Combine prompts with successive clicks, review the result, then send it yourself.
 
 One repository maintains the macOS and Windows versions. They share the prompt menu, configuration, and interaction logic; native input is handled by Swift on macOS and C# on Windows.
 
-**Project status:** macOS Apple Silicon has historical local build and test records. The Windows x64 adapter is implemented, compiled, tested with synthetic checks, and packaged as a portable application. Real Codex pasting, clipboard restoration, and visual/focus behavior still require manual acceptance. Recent Windows work did not rerun the Mac application. See the [validation record](docs/validation.md) and [Windows usage and acceptance guide](docs/windows.en.md).
+**Project status:** macOS Apple Silicon has been rebuilt, signed, and rechecked for universal target recognition; actual pasting into additional applications still needs per-app acceptance. The Windows x64 adapter is implemented, compiled, tested with synthetic checks, and packaged as a portable application. Real Codex pasting, clipboard restoration, and visual/focus behavior still require manual acceptance. See the [validation record](docs/validation.md) and [Windows usage and acceptance guide](docs/windows.en.md).
 
 This is the English documentation. The application currently uses Chinese menu labels and default prompts; the instructions below include the labels you will see.
 
@@ -25,7 +25,7 @@ For first use, manually check the local fixture through **Open input test** (`�
 
 1. Open the packaged `PhraseDock.app`. Put it in a stable location before granting permission.
 2. On first use, right-click the central button and choose **Open Accessibility settings** (`打开辅助功能设置`), then enable **AI Prompt Quick Appender** in System Settings. If it is missing, use `+` to add the `PhraseDock.app` you are actually running.
-3. Return to Codex and click its input field. Once the caret is visible, expand `+` and click a prompt.
+3. Return to the target application and click a standard text input. Once the caret is visible, expand `+` and click a prompt.
 4. The green dot on the central button indicates that the target input is ready. The app inserts text without pressing Enter to submit it.
 
 ### Shared controls
@@ -59,6 +59,7 @@ Example configuration using English prompts:
 {
   "schemaVersion": 1,
   "target": {
+    "macMode": "all",
     "macBundleIds": ["com.openai.codex"],
     "windowsExecutables": ["Codex.exe"],
     "windowsPackageFamilyNames": ["OpenAI.Codex_2p2nqsd0c76g0"]
@@ -72,7 +73,9 @@ Example configuration using English prompts:
 
 Configure 1–12 buttons. Each prompt supports up to 8,000 UTF-16 code units. Text is preserved literally, including newlines and leading/trailing whitespace. IDs must be unique. An invalid edit does not replace the last valid configuration; an invalid startup file produces a notice and temporarily uses the defaults.
 
-Older Mac and Windows 0.1.0 configurations remain valid. Missing Windows fields receive defaults in memory without rewriting the file. The Store version of Codex may host its window in `ChatGPT.exe`; it is identified by the OS-reported package family `OpenAI.Codex_2p2nqsd0c76g0`. This rule does not admit another package or an unpackaged executable just because it has the same filename. Unpackaged targets use the `windowsExecutables` filename allowlist, which does not accept paths or wildcards.
+New macOS installations default to `macMode: "all"`, which accepts standard Accessibility-recognized text inputs in the current foreground application. Secure fields, disabled controls, the login window, security-agent processes, and the app itself are rejected. Canvas-based, custom, and some rich-text editors may not be recognized. Set `macMode` to `allowlist` to restrict macOS to `macBundleIds`. Older Mac configurations without `macMode` remain allowlisted.
+
+The Windows target policy is unchanged. Older Windows 0.1.0 configurations remain valid, and missing Windows fields receive defaults in memory without rewriting the file. The Store version of Codex may host its window in `ChatGPT.exe`; it is identified by the OS-reported package family `OpenAI.Codex_2p2nqsd0c76g0`. This rule does not admit another package or an unpackaged executable just because it has the same filename. Unpackaged targets use the `windowsExecutables` filename allowlist, which does not accept paths or wildcards.
 
 The foreground window and its focused editable control are also checked. Eligible text inputs anywhere in an allowed app can be targets; this is not limited to the main chat composer.
 
@@ -174,6 +177,7 @@ Both platforms' source, icons, and scripts are versioned together. `node_modules
 ## Input behavior and boundaries
 
 - The floating panel is configured not to take keyboard focus. The foreground app and input control are rechecked before pasting.
+- On macOS, standard text areas, text fields, and combo boxes in the foreground application are accepted by default. PhraseDock itself, login/security processes, secure inputs, and disabled controls are rejected. Windows continues to use executable and package-family allowlists.
 - Missing permission, a disallowed target, a non-editable focus, or held modifier keys prevent the paste.
 - Prompt text crosses stdin JSON rather than shell command interpolation. Input values and clipboard contents are not logged. The runtime workflow does not connect to a remote service.
 - The clipboard is used temporarily. Readable supported formats are backed up and restored after pasting; a newer user copy is preserved. Unreadable or oversized clipboard data, including backups above 32 MiB, produces a notice.

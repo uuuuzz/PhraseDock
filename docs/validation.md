@@ -1,5 +1,14 @@
 # Validation
 
+## macOS universal input mode — 2026-09-07
+
+- New macOS installations default to `target.macMode: all`. Existing configurations without `macMode` remain explicit Mac allowlists, and Windows executable/package-family targeting is unchanged.
+- The Swift bridge allows standard text areas, text fields, and combo boxes in the foreground application while rejecting PhraseDock itself, login/security-agent processes, secure fields, and disabled controls.
+- **30 Node tests pass**, including universal Mac defaults, legacy Mac allowlist migration, unchanged Windows targets, bridge timeout/drain behavior, queue target binding, and the existing platform boundaries. JavaScript syntax checks and native Swift compilation pass.
+- The Apple Silicon application was rebuilt with the stable local certificate and passes `codesign --verify --deep --strict`. Existing Accessibility authorization remains trusted.
+- With universal mode enabled and no ChatGPT/Codex bundle ID in the request allowlist, the packaged helper recognized the foreground `com.openai.codex` `AXTextArea` as ready. The rebuilt GUI opened and loaded the migrated user configuration without a configuration error.
+- **Verification limit:** automation could not keep TextEdit as the system foreground application while invoking the packaged helper. Actual paste, selection replacement, and clipboard restoration in TextEdit, Notes, browsers, IDEs, and messaging applications remain manual acceptance items. Custom Canvas and rich-text editors may not expose one of the supported AX roles.
+
 ## Windows 0.1.3 — initial empty clipboard correction — 2026-09-06
 
 - The reported `无法读取剪贴板版本。` came from treating `GetClipboardSequenceNumber() == 0` as an unconditional access failure before backup. A read-only probe in a noninteractive window station observed sequence `0`, successful clipboard opening, zero formats, and successful enumeration. The interactive clipboard sequence remained `4` before and after the probe. This verifies a valid empty-state boundary; it does not reconstruct the user's original desktop state.
@@ -82,7 +91,7 @@ The private key remains in the developer's login keychain. No private key, PKCS#
 ## Remaining release validation
 
 - Perform actual Windows input and visual acceptance from `docs/windows.md`; implementation and compilation alone do not establish runtime support.
-- Recheck the Mac application after the shared lifecycle/queue changes.
+- Perform actual Mac paste and clipboard-restoration acceptance in representative non-Codex applications.
 - Build or test Intel/universal macOS output if it will be advertised.
 - Use Developer ID signing and notarization for a public macOS binary.
 - Package versioned release assets and publish SHA-256 checksums.

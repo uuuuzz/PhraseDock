@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "target": { "macBundleIds": ["com.openai.codex"], "windowsExecutables": ["Codex.exe"], "windowsPackageFamilyNames": ["OpenAI.Codex_2p2nqsd0c76g0"] },
+  "target": { "macMode": "all", "macBundleIds": ["com.openai.codex"], "windowsExecutables": ["Codex.exe"], "windowsPackageFamilyNames": ["OpenAI.Codex_2p2nqsd0c76g0"] },
   "phrases": [
     { "id": "analyze", "label": "先分析先不做", "text": "先分析先不做。" },
     { "id": "ask", "label": "有疑问直接问", "text": "有疑问先直接问。" },

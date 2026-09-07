@@ -13,11 +13,25 @@ test('preserves literal Unicode, whitespace and shell-like text without evaluati
   assert.equal(result.phrases[0].text, text);
   assert.equal(result.phrases[0].label, '多行');
 });
+test('new defaults enable universal macOS input without changing Windows targets', () => {
+  const result = validateConfig(structuredClone(defaults));
+  assert.equal(result.target.macMode, 'all');
+  assert.deepEqual(result.target.windowsExecutables, ['codex.exe']);
+  assert.deepEqual(result.target.windowsPackageFamilyNames, ['openai.codex_2p2nqsd0c76g0']);
+});
+test('legacy macOS configurations remain allowlisted', () => {
+  const legacy = structuredClone(defaults);
+  delete legacy.target.macMode;
+  const result = validateConfig(legacy);
+  assert.equal(result.target.macMode, 'allowlist');
+  assert.deepEqual(result.target.macBundleIds, ['com.openai.codex']);
+});
 test('rejects ambiguous IDs and invalid target configuration', () => {
   const value = structuredClone(defaults);
   value.phrases[1].id = value.phrases[0].id;
   assert.throws(() => validateConfig(value), /不能重复/);
-  assert.throws(() => validateConfig({ ...defaults, target: { macBundleIds: [] } }), /应用标识/);
+  assert.throws(() => validateConfig({ ...defaults, target: { ...defaults.target, macMode: 'allowlist', macBundleIds: [] } }), /应用标识/);
+  assert.throws(() => validateConfig({ ...defaults, target: { ...defaults.target, macMode: 'unknown' } }), /macMode/);
 });
 test('recovers a palette after an external display is disconnected', () => {
   const result = visibleBounds({ x: 2900, y: 100 }, [{ x: 0, y: 25, width: 1440, height: 875 }], 292, 312);
